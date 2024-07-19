@@ -4,7 +4,7 @@ part 'weather_forecast_service.chopper.dart';
 
 @ChopperApi(baseUrl: '/weatherForecast')
 abstract class WeatherForecastService extends ChopperService {
-  static WeatherForecastService create([ChopperClient chopperClient]) =>
+  static WeatherForecastService create([ChopperClient? chopperClient]) =>
       _$WeatherForecastService(chopperClient);
 
   @Get()

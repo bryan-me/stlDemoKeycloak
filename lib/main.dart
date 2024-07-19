@@ -8,7 +8,7 @@ import 'package:oauth2/oauth2.dart' as oauth2;
 import 'package:oauth2_test/weather_forecast_service.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-ChopperClient chopperClient;
+ChopperClient? chopperClient;
 
 class ApplicationHttpOverrides extends HttpOverrides {
   @override
@@ -44,7 +44,7 @@ class WeatherForecastApplication extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+  MyHomePage({required Key key, required this.title}) : super(key: key);
 
   final String title;
 
@@ -55,7 +55,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final logger = Logger('$_MyHomePageState');
 
-  Future<Response<List<Map<dynamic, dynamic>>>> _allWeatherForecasts;
+  late Future<Response<List<Map<dynamic, dynamic>>>> _allWeatherForecasts;
 
   @override
   void initState() {
@@ -142,7 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomPadding: false,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(widget.title),
       ),
@@ -168,16 +168,16 @@ class _MyHomePageState extends State<MyHomePage> {
             );
           }
 
-          final weatherForecasts = weatherForecastsSnapshot.data.body;
+          final weatherForecasts = weatherForecastsSnapshot.data!.body;
           return ListView.builder(
-            itemCount: weatherForecasts.length,
+            itemCount: weatherForecasts!.length,
             itemBuilder: (_, int index) {
               final weatherForecast = weatherForecasts[index];
               final date = DateTime.tryParse(weatherForecast['date']);
 
               return ListTile(
                 title: Text('${weatherForecast['summary']}'),
-                subtitle: Text('${date.day}/${date.month}'),
+                subtitle: Text('${date!.day}/${date!.month}'),
                 trailing: Text(
                   '${weatherForecast['temperatureC']} °C',
                 ),
@@ -201,7 +201,7 @@ class _MyHomePageState extends State<MyHomePage> {
           );
 
           final weatherForecastService =
-              chopperClient.getService<WeatherForecastService>();
+              chopperClient!.getService<WeatherForecastService>();
           setState(() {
             _allWeatherForecasts =
                 weatherForecastService.getAllWeatherForecasts();
