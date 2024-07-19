@@ -12,7 +12,7 @@ ChopperClient? chopperClient;
 
 class ApplicationHttpOverrides extends HttpOverrides {
   @override
-  HttpClient createHttpClient(SecurityContext context) {
+  HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
       ..badCertificateCallback = (_, __, ___) => true;
   }
@@ -44,7 +44,7 @@ class WeatherForecastApplication extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({required Key key, required this.title}) : super(key: key);
+  MyHomePage({Key? key, required this.title}) : super(key: key);
 
   final String title;
 
@@ -102,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // query parameters). Scopes and state can optionally be passed into this method.
     var authorizationUrl = grant.getAuthorizationUrl(redirectUrl);
 
-    Uri responseUrl;
+    Uri? responseUrl;
 
     await Navigator.push(
         context,
@@ -133,10 +133,15 @@ class _MyHomePageState extends State<MyHomePage> {
               );
             }));
 
-    // Once the user is redirected to `redirectUrl`, pass the query parameters to
-    // the AuthorizationCodeGrant. It will validate them and extract the
-    // authorization code to create a new Client.
-    return grant.handleAuthorizationResponse(responseUrl.queryParameters);
+    // Ensure responseUrl is not null before proceeding
+    if (responseUrl != null) {
+      // Once the user is redirected to `redirectUrl`, pass the query parameters to
+      // the AuthorizationCodeGrant. It will validate them and extract the
+      // authorization code to create a new Client.
+      return grant.handleAuthorizationResponse(responseUrl!.queryParameters);
+    } else {
+      throw Exception('Response URL is null');
+    }
   }
 
   @override
@@ -193,7 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
           chopperClient = ChopperClient(
             client: httpClient,
-            baseUrl: 'https://10.0.2.2:5001',
+            baseUrl: Uri.parse('https://10.0.2.2:5001'),
             converter: JsonConverter(),
             services: [
               WeatherForecastService.create(),
