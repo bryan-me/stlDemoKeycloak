@@ -252,7 +252,7 @@ void main() {
       print('[${record.level.name}] ${record.time}: ${record.message}');
     }
   });
-WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(WeatherForecastApplication());
 }
 
@@ -265,8 +265,7 @@ class WeatherForecastApplication extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: ChatterScreen(),
-      // MyHomePage(title: 'STL Notification Demo'),
+      home: MyHomePage(title: 'STL Notification Demo'),
     );
   }
 }
@@ -282,34 +281,27 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final logger = Logger('$_MyHomePageState');
-String _token = '';
-  // Future<Response<List<Map<dynamic, dynamic>>>>? _allWeatherForecasts;
+  String _token = '';
 
   @override
   void initState() {
     super.initState();
 
-    // Enable hybrid composition.
     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
   }
 
-  /// Either load an OAuth2 client from saved credentials or authenticate a new
-  /// one.
   Future<oauth2.Client> createClient() async {
     final redirectUri = Uri.parse('com.example.demo2:/callback');
     final clientId = 'frontend';
-    // final secret = 'eca09a20-27db-4141-8976-33886e3eecf8';
     final authorizationEndpoint = Uri.parse(
         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/auth?client_id=$clientId&redirect_uri=$redirectUri&response_type=code&scope=openid');
     final tokenEndpoint = Uri.parse(
-        '$authorizationEndpoint/protocol/openid-connect/token');
+        'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/token');
     
-
     var grant = oauth2.AuthorizationCodeGrant(
       clientId,
       authorizationEndpoint,
       tokenEndpoint,
-      // secret: secret,
     );
 
     var authorizationUrl = grant.getAuthorizationUrl(redirectUri);
@@ -327,43 +319,30 @@ String _token = '';
                     javascriptMode: JavascriptMode.unrestricted,
                     initialUrl: authorizationUrl.toString(),
                     navigationDelegate: (navigationRequest) {
-                      if (navigationRequest.url
-                          .startsWith(redirectUri.toString())) {
+                      if (navigationRequest.url.startsWith(redirectUri.toString())) {
                         responseUrl = Uri.parse(navigationRequest.url);
-                        print('Response URL: $responseUrl}');
                         Navigator.pop(context);
                         return NavigationDecision.prevent;
                       }
                       return NavigationDecision.navigate;
                     },
-                //     navigationDelegate: (navigationRequest) {
-                //   if (navigationRequest.url.startsWith(redirectUri.toString())) {
-                //     responseUrl = Uri.parse(navigationRequest.url);
-                //     print('Response URL: $responseUrl}');
-                //     Navigator.of(context).pop(); // Ensure to pop the navigator stack properly
-                //     return NavigationDecision.prevent;
-                //   }
-                //   return NavigationDecision.navigate;
-                // },
                   ),
                 ),
               );
             }));
 
-    // Extract the authorization code from the redirect URI
-      final code = responseUrl!.queryParameters['code'];
+    final code = responseUrl?.queryParameters['code'];
 
-       if (code != null) {
+    if (code != null) {
       try {
         final tokenResponse = await http.post(
-          Uri.parse('$authorizationUrl/protocol/openid-connect/token'),
+          Uri.parse(tokenEndpoint.toString()),
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
           body: {
             'grant_type': 'authorization_code',
             'code': code,
             'redirect_uri': redirectUri.toString(),
             'client_id': clientId,
-            // 'client_secret': clientSecret,
           },
         );
 
@@ -388,14 +367,13 @@ String _token = '';
         print('Error: $e');
         setState(() {
           _token = '';
-          
         });
       }
     } else {
       throw Exception('Authorization code is null');
-      
     }
-      throw Exception('Authorization code is null');
+
+    throw Exception('Authorization code is null');
   }
 
   @override
@@ -407,29 +385,12 @@ String _token = '';
       ),
       body: Center(
         child: ElevatedButton(
-        child: Text('Login with Keycloak'),
-        onPressed: () async {
-          final httpClient = await createClient();
-
-          // chopperClient = ChopperClient(
-          //   client: httpClient,
-          //   baseUrl: Uri.parse('https://10.0.2.2:5001'),
-          //   converter: JsonConverter(),
-          //   services: [
-          //     WeatherForecastService.create(),
-          //   ],
-          // );
-
-          // final weatherForecastService =
-          //     chopperClient!.getService<WeatherForecastService>();
-          // setState(() {
-          //   _allWeatherForecasts =
-          //       weatherForecastService.getAllWeatherForecasts();
-          //   print('Weather forecasts: $_allWeatherForecasts');
-          // });
-        },
+          child: Text('Login with Keycloak'),
+          onPressed: () async {
+            final httpClient = await createClient();
+          },
+        ),
       ),
-      )
     );
   }
 }
