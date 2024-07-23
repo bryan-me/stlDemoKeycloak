@@ -565,14 +565,28 @@
 // }
 
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:oauth2_test/constants.dart';
-import '../constants.dart';
+import 'package:oauth2_test/tokenmanager.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-String username = 'Logged In User';
-String email = 'user@example.com';
+
 
 class ChatterScreen extends StatefulWidget {
+  final String token;
+  final String username;
+  final String email;
+  final String sessionState;
+
+  ChatterScreen({
+    required this.token,
+    required this.username,
+    required this.email,
+    required this.sessionState,
+  });
+
   @override
   _ChatterScreenState createState() => _ChatterScreenState();
 }
@@ -585,57 +599,96 @@ class _ChatterScreenState extends State<ChatterScreen> {
   @override
   void initState() {
     super.initState();
-    getCurrentUser();
+    print('Session State in ChatterScreen: ${widget.sessionState}');
     getMessages();
   }
 
-  void getCurrentUser() {
-    setState(() {
-      username = 'Logged In User';
-      email = 'user@example.com';
-    });
-  }
-
-  void getMessages() {
-    // Dummy data for messages
-    final dummyMessages = [
-      {'text': 'Hello there!', 'sender': 'Friend'},
-      {'text': 'Hi! How are you?', 'sender': 'Logged In User'},
-      {'text': 'I am good, thank you!', 'sender': 'Friend'},
-      {'text': 'What about you?', 'sender': 'Friend'},
-      {'text': 'I am doing great, thanks!', 'sender': 'Logged In User'},
-    ];
-    setState(() {
-      messages = dummyMessages.map((message) {
-        return MessageBubble(
-          msgText: message['text'] as String,
-          msgSender: message['sender'] as String,
-          user: message['sender'] == username,
-        );
-      }).toList();
-    });
-
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
-  }
-
-  void sendMessage(String messageText) {
-    final newMessage = {
-      'text': messageText,
-      'sender': username,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-      'senderEmail': email,
+  Future<void> getMessages() async {
+    final url = Uri.parse('http://192.168.250.209:7300/api/v1/messages/findAll');
+    final headers = {
+      'Authorization': 'Bearer ${widget.token}',
     };
-    setState(() {
-      messages.add(MessageBubble(
-        msgText: newMessage['text'] as String,
-        msgSender: newMessage['sender'] as String,
-        user: true,
-      ));
-      chatMsgTextController.clear();
+
+    print('Fetching messages from: $url with headers: $headers');
+
+    try {
+      final response = await http.get(url, headers: headers);
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        // Assuming the messages are in a field called 'data'
+        final List<dynamic> messageData = responseData['data'] ?? [];
+
+        setState(() {
+          messages = messageData.map((message) {
+            return MessageBubble(
+              msgText: message['message'] ?? 'No message',
+              msgSender: message['senderId'] ?? 'Unknown',
+              user: message['senderId'] == widget.username,
+            );
+          }).toList();
+        });
+
+        WidgetsBinding.instance?.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+      } else {
+        print('Failed to load messages');
+      }
+    } catch (e) {
+      print('Error fetching messages: $e');
+    }
+  }
+
+  void sendMessage() async {
+    final messageText = chatMsgTextController.text;
+
+    if (messageText.isEmpty) {
+      print('Message text is empty');
+      return;
+    }
+
+    final url = Uri.parse('http://192.168.250.209:7300/api/v1/messages/create-message');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${widget.token}',
+      'apikey': '65bcc0d4-3d68-455c-b6c1-168c8f20eb27',
+    };
+    final body = jsonEncode({
+      'sender': widget.username,
+      'message': messageText,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'senderEmail': widget.email,
     });
-    _scrollToBottom();
+
+    print('Sending message to: $url with headers: $headers and body: $body');
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      print('Send message response status: ${response.statusCode}');
+      print('Send message response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        setState(() {
+          messages.add(MessageBubble(
+            msgText: messageText,
+            msgSender: widget.username,
+            user: true,
+          ));
+          chatMsgTextController.clear();
+        });
+        _scrollToBottom();
+      } else {
+        print('Failed to send message: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      print('Error sending message: $e');
+    }
   }
 
   void _scrollToBottom() {
@@ -646,6 +699,40 @@ class _ChatterScreenState extends State<ChatterScreen> {
     );
   }
 
+  Future<void> logout() async {
+    final sessionState = widget.sessionState;
+    if (sessionState.isEmpty) {
+      print('No session state found.');
+      return;
+    }
+
+    final logoutEndpoint = Uri.parse('http://192.168.250.209:8070/auth/admin/realms/Push/sessions/$sessionState');
+    print('Logging out from: $logoutEndpoint with token: ${widget.token}');
+
+    try {
+      final response = await http.delete(
+        logoutEndpoint,
+        headers: {
+          'Authorization': 'Bearer ${widget.token}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('Logout response status: ${response.statusCode}');
+      print('Logout response body: ${response.body}');
+
+      if (response.statusCode == 204) {
+        print('Logout successful.');
+        TokenManager.clearTokens();
+        Navigator.pushReplacementNamed(context, '/'); // Adjust the route as needed
+      } else {
+        print('Logout failed: ${response.body}');
+      }
+    } catch (e) {
+      print('Error during logout: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -653,7 +740,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
         iconTheme: IconThemeData(color: Colors.blue),
         elevation: 0,
         bottom: PreferredSize(
-          preferredSize: Size(25, 10),
+          preferredSize: Size.fromHeight(1),
           child: Container(
             child: LinearProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -705,15 +792,16 @@ class _ChatterScreenState extends State<ChatterScreen> {
               decoration: BoxDecoration(
                 color: Colors.blue[900],
               ),
-              accountName: Text(username),
-              accountEmail: Text(email),
+              accountName: Text(widget.username),
+              accountEmail: Text(widget.email),
             ),
             ListTile(
               leading: Icon(Icons.exit_to_app),
               title: Text("Logout"),
               subtitle: Text("Sign out of this account"),
               onTap: () async {
-                Navigator.pushReplacementNamed(context, '/');
+                await logout();
+                // Navigator.pushReplacementNamed(context, '/');
               },
             ),
           ],
@@ -738,8 +826,6 @@ class _ChatterScreenState extends State<ChatterScreen> {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 8.0, top: 2, bottom: 2),
                       child: TextField(
-                        onChanged: (value) {
-                        },
                         controller: chatMsgTextController,
                         decoration: kMessageTextFieldDecoration,
                       ),
@@ -750,9 +836,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
                   shape: CircleBorder(),
                   color: Colors.blue,
                   onPressed: () {
-                    if (chatMsgTextController.text.isNotEmpty) {
-                      sendMessage(chatMsgTextController.text);
-                    }
+                    sendMessage();
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(10.0),
@@ -791,7 +875,11 @@ class MessageBubble extends StatelessWidget {
   final String msgSender;
   final bool user;
 
-  MessageBubble({required this.msgText, required this.msgSender, required this.user});
+  MessageBubble({
+    required this.msgText,
+    required this.msgSender,
+    required this.user,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -800,7 +888,6 @@ class MessageBubble extends StatelessWidget {
       child: Column(
         crossAxisAlignment: user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: <Widget>[
-          // Hello
           Material(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(50),
@@ -827,4 +914,3 @@ class MessageBubble extends StatelessWidget {
     );
   }
 }
-

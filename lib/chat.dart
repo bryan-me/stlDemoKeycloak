@@ -84,10 +84,11 @@
 // }
 
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:oauth2_test/constants.dart';
+import 'package:oauth2_test/tokenmanager.dart';
 
 class ChatScreen extends StatefulWidget {
   @override
@@ -97,8 +98,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController chatMsgTextController = TextEditingController();
   String messageText = '';
-  String username = 'User';
-  String email = 'user@example.com';
+  String username = '';
+  String email = '';
 
   @override
   void initState() {
@@ -106,20 +107,49 @@ class _ChatScreenState extends State<ChatScreen> {
     getCurrentUser();
   }
 
-  void getCurrentUser() async {
-    // Replace this with your own authentication logic
-    // For example, you might want to fetch the current user's details from your backend
-    setState(() {
-      username = 'Me';
-      email = 'user@example.com';
-    });
+  Future<void> getCurrentUser() async {
+    final accessToken = TokenManager.accessToken; 
+
+    if (accessToken == null) {
+      print('No access token available');
+      return;
+    }
+
+    print('Fetching user details with access token: $accessToken');
+
+    final response = await http.get(
+      Uri.parse('http://192.168.250.209:7300/api/v1/users/me'), 
+      headers: {
+        'Authorization': 'Bearer $accessToken', 
+      },
+    );
+
+    print('User details response: ${response.statusCode} ${response.body}');
+
+    if (response.statusCode == 200) {
+      final userData = jsonDecode(response.body);
+      setState(() {
+        username = userData['username'] ?? 'Unknown User'; 
+        email = userData['email'] ?? 'Unknown Email'; 
+      });
+
+      print('Fetched user details: username=$username, email=$email');
+    } else {
+      print('Failed to fetch user details: ${response.statusCode} ${response.body}');
+    }
   }
 
   void sendMessage() async {
     if (messageText.isNotEmpty) {
+      print('Sending message: $messageText');
+
       final response = await http.post(
-        Uri.parse('http://localhost:7300/api/v1/messages/create-message'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('http://192.168.250.209:7300/api/v1/messages/create-message'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${TokenManager.accessToken}', 
+          'apikey': '65bcc0d4-3d68-455c-b6c1-168c8f20eb27' 
+        },
         body: jsonEncode({
           'sender': username,
           'text': messageText,
@@ -128,21 +158,25 @@ class _ChatScreenState extends State<ChatScreen> {
         }),
       );
 
+      print('Send message response: ${response.statusCode} ${response.body}');
+
       if (response.statusCode == 201) {
-        // Message sent successfully, clear the text field
-        chatMsgTextController.clear();
         setState(() {
+          chatMsgTextController.clear();
           messageText = '';
         });
+
+        print('Message sent successfully');
       } else {
-        // Handle error
-        print('Failed to send message');
+        print('Failed to send message: ${response.statusCode} ${response.body}');
       }
+    } else {
+      print('Message text is empty, not sending');
     }
   }
 
   void logout() {
-    // Replace this with your own logout logic
+    print('Logging out');
     Navigator.pushReplacementNamed(context, '/');
   }
 
@@ -154,9 +188,7 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.close),
-            onPressed: () {
-              logout();
-            },
+            onPressed: logout,
           ),
         ],
         title: Text('⚡️Chat'),
@@ -167,6 +199,8 @@ class _ChatScreenState extends State<ChatScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
+            // Chat messages will go here
+
             Container(
               decoration: kMessageContainerDecoration,
               child: Row(
@@ -176,7 +210,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: TextField(
                       controller: chatMsgTextController,
                       onChanged: (value) {
-                        messageText = value;
+                        setState(() {
+                          messageText = value;
+                        });
+
+                        print('Message text changed: $messageText');
                       },
                       decoration: kMessageTextFieldDecoration,
                     ),

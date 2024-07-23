@@ -221,20 +221,570 @@
 
 
 
-import 'dart:io';
+// import 'dart:io';
+// import 'dart:convert';
+// import 'package:chopper/chopper.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter/material.dart';
+// import 'package:logging/logging.dart';
+// import 'package:http/http.dart' as http;
+// import 'package:oauth2/oauth2.dart' as oauth2;
+// import 'package:oauth2_test/chatterscreen.dart';
+// import 'package:oauth2_test/weather_forecast_service.dart';
+// import 'package:webview_flutter/webview_flutter.dart';
+// import 'package:jwt_decoder/jwt_decoder.dart';
+
+// ChopperClient? chopperClient;
+
+// class ApplicationHttpOverrides extends HttpOverrides {
+//   @override
+//   HttpClient createHttpClient(SecurityContext? context) {
+//     return super.createHttpClient(context)
+//       ..badCertificateCallback = (_, __, ___) => true;
+//   }
+// }
+
+// void main() {
+//   HttpOverrides.global = ApplicationHttpOverrides();
+
+//   Logger.root.onRecord.listen((record) {
+//     if (kReleaseMode) {
+//       print('[${record.level.name}] ${record.time}: ${record.message}');
+//     }
+//   });
+//   WidgetsFlutterBinding.ensureInitialized();
+//   runApp(WeatherForecastApplication());
+// }
+
+// class WeatherForecastApplication extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Flutter Demo',
+//       debugShowCheckedModeBanner: false,
+//       theme: ThemeData(
+//         primarySwatch: Colors.blue,
+//       ),
+//       home: MyHomePage(title: 'STL Notification Demo'),
+//     );
+//   }
+// }
+
+// class MyHomePage extends StatefulWidget {
+//   MyHomePage({Key? key, required this.title}) : super(key: key);
+
+//   final String title;
+
+//   @override
+//   _MyHomePageState createState() => _MyHomePageState();
+// }
+
+// class _MyHomePageState extends State<MyHomePage> {
+//   final logger = Logger('$_MyHomePageState');
+//   String _token = '';
+
+//   @override
+//   void initState() {
+//     super.initState();
+
+//     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
+//   }
+
+//   Future<oauth2.Client> createClient() async {
+//     final redirectUri = Uri.parse('com.example.demo2:/callback');
+//     final clientId = 'frontend';
+//     final authorizationEndpoint = Uri.parse(
+//         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/auth?client_id=$clientId&redirect_uri=$redirectUri&response_type=code&scope=openid');
+//     final tokenEndpoint = Uri.parse(
+//         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/token');
+    
+//     var grant = oauth2.AuthorizationCodeGrant(
+//       clientId,
+//       authorizationEndpoint,
+//       tokenEndpoint,
+//     );
+
+//     var authorizationUrl = grant.getAuthorizationUrl(redirectUri);
+
+//     Uri? responseUrl;
+
+//     await Navigator.push(
+//         context,
+//         MaterialPageRoute(
+//             fullscreenDialog: true,
+//             builder: (_) {
+//               return SafeArea(
+//                 child: Container(
+//                   child: WebView(
+//                     javascriptMode: JavascriptMode.unrestricted,
+//                     initialUrl: authorizationUrl.toString(),
+//                     navigationDelegate: (navigationRequest) {
+//                       if (navigationRequest.url.startsWith(redirectUri.toString())) {
+//                         responseUrl = Uri.parse(navigationRequest.url);
+//                         Navigator.pop(context);
+//                         return NavigationDecision.prevent;
+//                       }
+//                       return NavigationDecision.navigate;
+//                     },
+//                   ),
+//                 ),
+//               );
+//             }));
+
+//     final code = responseUrl?.queryParameters['code'];
+
+//     if (code != null) {
+//       try {
+//         final tokenResponse = await http.post(
+//           Uri.parse(tokenEndpoint.toString()),
+//           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+//           body: {
+//             'grant_type': 'authorization_code',
+//             'code': code,
+//             'redirect_uri': redirectUri.toString(),
+//             'client_id': clientId,
+//           },
+//         );
+
+//         final tokenData = json.decode(tokenResponse.body);
+//         final token = tokenData['access_token'];
+
+//         setState(() {
+//           _token = token ?? '';
+//         });
+
+//         if (_token.isNotEmpty) {
+//           final decodedToken = JwtDecoder.decode(_token);
+//           print('Token: $_token');
+//           print('Decoded Token: $decodedToken');
+
+//           Navigator.push(
+//             context,
+//             MaterialPageRoute(builder: (context) => ChatterScreen()),
+//           );
+//         }
+//       } catch (e) {
+//         print('Error: $e');
+//         setState(() {
+//           _token = '';
+//         });
+//       }
+//     } else {
+//       throw Exception('Authorization code is null');
+//     }
+
+//     throw Exception('Authorization code is null');
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       resizeToAvoidBottomInset: false,
+//       appBar: AppBar(
+//         title: Text(widget.title),
+//       ),
+//       body: Center(
+//         child: ElevatedButton(
+//           child: Text('Login with Keycloak'),
+//           onPressed: () async {
+//             final httpClient = await createClient();
+//           },
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+// THIS WORKS BUT THERES A PROBLEM WITH THE TOKEN EXCAHNGE
+// import 'dart:io';
+// import 'dart:convert';
+// import 'package:chopper/chopper.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter/material.dart';
+// import 'package:logging/logging.dart';
+// import 'package:http/http.dart' as http;
+// import 'package:oauth2/oauth2.dart' as oauth2;
+// import 'package:oauth2_test/chatterscreen.dart';
+// import 'package:oauth2_test/weather_forecast_service.dart';
+// import 'package:webview_flutter/webview_flutter.dart';
+// import 'package:jwt_decoder/jwt_decoder.dart';
+
+// ChopperClient? chopperClient;
+
+// class ApplicationHttpOverrides extends HttpOverrides {
+//   @override
+//   HttpClient createHttpClient(SecurityContext? context) {
+//     return super.createHttpClient(context)
+//       ..badCertificateCallback = (_, __, ___) => true;
+//   }
+// }
+
+// void main() {
+//   HttpOverrides.global = ApplicationHttpOverrides();
+
+//   Logger.root.onRecord.listen((record) {
+//     if (kReleaseMode) {
+//       print('[${record.level.name}] ${record.time}: ${record.message}');
+//     }
+//   });
+//   WidgetsFlutterBinding.ensureInitialized();
+//   runApp(WeatherForecastApplication());
+// }
+
+// class WeatherForecastApplication extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Flutter Demo',
+//       debugShowCheckedModeBanner: false,
+//       theme: ThemeData(
+//         primarySwatch: Colors.blue,
+//       ),
+//       home: MyHomePage(title: 'STL Notification Demo'),
+//     );
+//   }
+// }
+
+// class MyHomePage extends StatefulWidget {
+//   MyHomePage({Key? key, required this.title}) : super(key: key);
+
+//   final String title;
+
+//   @override
+//   _MyHomePageState createState() => _MyHomePageState();
+// }
+
+// class _MyHomePageState extends State<MyHomePage> {
+//   final logger = Logger('$_MyHomePageState');
+//   String _token = '';
+
+//   @override
+//   void initState() {
+//     super.initState();
+
+//     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
+//   }
+
+//   Future<oauth2.Client> createClient() async {
+//     final redirectUri = Uri.parse('com.example.demo2:/callback');
+//     final clientId = 'frontend';
+//     final authorizationEndpoint = Uri.parse(
+//         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/auth?client_id=$clientId&redirect_uri=$redirectUri&response_type=code&scope=openid');
+//     final tokenEndpoint = Uri.parse(
+//         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/token');
+    
+//     var grant = oauth2.AuthorizationCodeGrant(
+//       clientId,
+//       authorizationEndpoint,
+//       tokenEndpoint,
+//     );
+
+//     var authorizationUrl = grant.getAuthorizationUrl(redirectUri);
+
+//     Uri? responseUrl;
+
+//     await Navigator.push(
+//         context,
+//         MaterialPageRoute(
+//             fullscreenDialog: true,
+//             builder: (_) {
+//               return SafeArea(
+//                 child: Container(
+//                   child: WebView(
+//                     javascriptMode: JavascriptMode.unrestricted,
+//                     initialUrl: authorizationUrl.toString(),
+//                     navigationDelegate: (navigationRequest) {
+//                       if (navigationRequest.url.startsWith(redirectUri.toString())) {
+//                         responseUrl = Uri.parse(navigationRequest.url);
+//                         Navigator.pop(context);
+//                         return NavigationDecision.prevent;
+//                       }
+//                       return NavigationDecision.navigate;
+//                     },
+//                   ),
+//                 ),
+//               );
+//             }));
+
+//     if (responseUrl != null) {
+//       print('Response URL: $responseUrl');
+//       final code = responseUrl?.queryParameters['code'];
+//       print('Authorization code: $code');
+
+//       if (code != null) {
+//         try {
+//           final tokenResponse = await http.post(
+//             Uri.parse(tokenEndpoint.toString()),
+//             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+//             body: {
+//               'grant_type': 'authorization_code',
+//               'code': code,
+//               'redirect_uri': redirectUri.toString(),
+//               'client_id': clientId,
+//             },
+//           );
+
+//           print('Token response: ${tokenResponse.body}');
+//           final tokenData = json.decode(tokenResponse.body);
+//           final token = tokenData['access_token'];
+//           print('Access token: $token');
+
+//           if (token != null && token.isNotEmpty) {
+//             setState(() {
+//               _token = token;
+//             });
+
+//             final decodedToken = JwtDecoder.decode(_token);
+//             print('Decoded Token: $decodedToken');
+
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (context) => ChatterScreen()),
+//             );
+
+//             return grant.handleAuthorizationResponse(responseUrl!.queryParameters); // Return the client here
+//           } else {
+//             throw Exception('Access token is empty');
+//           }
+//         } catch (e) {
+//           print('Error during token exchange: $e');
+//           setState(() {
+//             _token = '';
+//           });
+//           throw Exception('Failed to obtain access token');
+//         }
+//       } else {
+//         throw Exception('Authorization code is null');
+//       }
+//     } else {
+//       throw Exception('Response URL is null');
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       resizeToAvoidBottomInset: false,
+//       appBar: AppBar(
+//         title: Text(widget.title),
+//       ),
+//       body: Center(
+//         child: ElevatedButton(
+//           child: Text('Login with Keycloak'),
+//           onPressed: () async {
+//             try {
+//               final httpClient = await createClient();
+//               // Proceed with your authenticated client
+//             } catch (e) {
+//               print('Error during login: $e');
+//               // Handle login error appropriately
+//             }
+//           },
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+// import 'dart:convert';
+// import 'dart:io';
+// // import 'dart:math';
+// // import 'package:crypto/crypto.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter/material.dart';
+// import 'package:http/http.dart' as http;
+// import 'package:logging/logging.dart';
+// import 'package:oauth2_test/chatterscreen.dart';
+// import 'package:webview_flutter/webview_flutter.dart';
+// import 'package:jwt_decoder/jwt_decoder.dart';
+
+// class ApplicationHttpOverrides extends HttpOverrides {
+//   @override
+//   HttpClient createHttpClient(SecurityContext? context) {
+//     return super.createHttpClient(context)
+//       ..badCertificateCallback = (_, __, ___) => true;
+//   }
+// }
+
+// void main() {
+//   HttpOverrides.global = ApplicationHttpOverrides();
+
+//   Logger.root.onRecord.listen((record) {
+//     if (kReleaseMode) {
+//       print('[${record.level.name}] ${record.time}: ${record.message}');
+//     }
+//   });
+//   WidgetsFlutterBinding.ensureInitialized();
+//   runApp(WeatherForecastApplication());
+// }
+
+// class WeatherForecastApplication extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Flutter Demo',
+//       debugShowCheckedModeBanner: false,
+//       theme: ThemeData(
+//         primarySwatch: Colors.blue,
+//       ),
+//       home: MyHomePage(title: 'STL Notification Demo'),
+//     );
+//   }
+// }
+
+// class MyHomePage extends StatefulWidget {
+//   MyHomePage({Key? key, required this.title}) : super(key: key);
+
+//   final String title;
+
+//   @override
+//   _MyHomePageState createState() => _MyHomePageState();
+// }
+
+// class _MyHomePageState extends State<MyHomePage> {
+//   final logger = Logger('$_MyHomePageState');
+//   String _token = '';
+//   // late String _codeVerifier;
+//   final TextEditingController _usernameController = TextEditingController();
+//   final TextEditingController _passwordController = TextEditingController();
+
+//   @override
+//   void initState() {
+//     super.initState();
+
+//     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
+//   }
+
+//   Future<void> createClient() async {
+//     final tokenEndpoint = Uri.parse(
+//         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/token');
+//     final clientId = 'frontend';
+//     final username = _usernameController.text;
+//     final password = _passwordController.text;
+
+//     try {
+//       final tokenResponse = await http.post(
+//         tokenEndpoint,
+//         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+//         body: {
+//           'grant_type': 'password',
+//           'client_id': clientId,
+//           'username': username,
+//           'password': password,
+//         },
+//       );
+
+//       print('Token response: ${tokenResponse.body}');
+//       final tokenData = json.decode(tokenResponse.body);
+//       final token = tokenData['access_token'];
+//       print('Access token: $token');
+
+//       if (token != null && token.isNotEmpty) {
+//         setState(() {
+//           _token = token;
+//         });
+
+//         final decodedToken = JwtDecoder.decode(_token);
+//         print('Decoded Token: $decodedToken');
+
+//         // Log a successful login message
+//         logger.info('Login successful for user $username');
+
+//        Navigator.push(
+//         context,
+//         MaterialPageRoute(
+//           builder: (context) => ChatterScreen(
+//             token: _token,
+//             username: decodedToken['preferred_username'],
+//             email: decodedToken['email'],
+//           ),
+//         ),
+//       );
+//       } else {
+//         throw Exception('Access token is empty');
+//       }
+//     } catch (e) {
+//       print('Error during token exchange: $e');
+//       setState(() {
+//         _token = '';
+//       });
+//       throw Exception('Failed to obtain access token');
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       resizeToAvoidBottomInset: false,
+//       appBar: AppBar(
+//         title: Text(widget.title),
+//       ),
+//       body: Center(
+//         child: Column(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: <Widget>[
+//             TextField(
+//               controller: _usernameController,
+//               decoration: InputDecoration(labelText: 'Username'),
+//             ),
+//             TextField(
+//               controller: _passwordController,
+//               decoration: InputDecoration(labelText: 'Password'),
+//               obscureText: true,
+//             ),
+//             SizedBox(height: 20),
+//             ElevatedButton(
+//               child: Text('Login with Keycloak'),
+//               onPressed: () async {
+//                 try {
+//                   await createClient();
+//                   // Proceed with your authenticated client
+//                 } catch (e) {
+//                   print('Error during login: $e');
+//                   // Handle login error appropriately
+//                 }
+//               },
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
 import 'dart:convert';
-import 'package:chopper/chopper.dart';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:logging/logging.dart';
 import 'package:http/http.dart' as http;
-import 'package:oauth2/oauth2.dart' as oauth2;
+import 'package:logging/logging.dart';
 import 'package:oauth2_test/chatterscreen.dart';
-import 'package:oauth2_test/weather_forecast_service.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 
-ChopperClient? chopperClient;
+
+// Global Token Manager
+class TokenManager {
+  static String? accessToken;
+  static String? refreshToken;
+  static String? sessionState;
+
+  static void setTokens(String access, String refresh, String session) {
+    accessToken = access;
+    refreshToken = refresh;
+    sessionState = session;
+  }
+
+  static void clearTokens() {
+    accessToken = null;
+    refreshToken = null;
+    sessionState = null;
+  }
+}
 
 class ApplicationHttpOverrides extends HttpOverrides {
   @override
@@ -281,7 +831,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final logger = Logger('$_MyHomePageState');
-  String _token = '';
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void initState() {
@@ -290,90 +841,64 @@ class _MyHomePageState extends State<MyHomePage> {
     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
   }
 
-  Future<oauth2.Client> createClient() async {
-    final redirectUri = Uri.parse('com.example.demo2:/callback');
-    final clientId = 'frontend';
-    final authorizationEndpoint = Uri.parse(
-        'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/auth?client_id=$clientId&redirect_uri=$redirectUri&response_type=code&scope=openid');
+  Future<void> createClient() async {
     final tokenEndpoint = Uri.parse(
         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/token');
-    
-    var grant = oauth2.AuthorizationCodeGrant(
-      clientId,
-      authorizationEndpoint,
-      tokenEndpoint,
-    );
+    final clientId = 'frontend';
+    final username = _usernameController.text;
+    final password = _passwordController.text;
 
-    var authorizationUrl = grant.getAuthorizationUrl(redirectUri);
+    try {
+      final tokenResponse = await http.post(
+        tokenEndpoint,
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'grant_type': 'password',
+          'client_id': clientId,
+          'username': username,
+          'password': password,
+        },
+      );
 
-    Uri? responseUrl;
+      print('Token response: ${tokenResponse.body}');
+       final tokenData = json.decode(tokenResponse.body);
+    final accessToken = tokenData['access_token'];
+    final refreshToken = tokenData['refresh_token'];
+    final decodedToken = JwtDecoder.decode(accessToken);
+    final sessionState = decodedToken['session_state'];
 
-    await Navigator.push(
-        context,
-        MaterialPageRoute(
-            fullscreenDialog: true,
-            builder: (_) {
-              return SafeArea(
-                child: Container(
-                  child: WebView(
-                    javascriptMode: JavascriptMode.unrestricted,
-                    initialUrl: authorizationUrl.toString(),
-                    navigationDelegate: (navigationRequest) {
-                      if (navigationRequest.url.startsWith(redirectUri.toString())) {
-                        responseUrl = Uri.parse(navigationRequest.url);
-                        Navigator.pop(context);
-                        return NavigationDecision.prevent;
-                      }
-                      return NavigationDecision.navigate;
-                    },
-                  ),
-                ),
-              );
-            }));
+      if (accessToken != null && accessToken.isNotEmpty) {
+      setState(() {
+        TokenManager.setTokens(accessToken, refreshToken, sessionState);
+      });
 
-    final code = responseUrl?.queryParameters['code'];
+      print('Access token: $accessToken');
+      print('Session State: $sessionState');
+      print('Decoded Token: $decodedToken');
 
-    if (code != null) {
-      try {
-        final tokenResponse = await http.post(
-          Uri.parse(tokenEndpoint.toString()),
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: {
-            'grant_type': 'authorization_code',
-            'code': code,
-            'redirect_uri': redirectUri.toString(),
-            'client_id': clientId,
-          },
+      logger.info('Login successful for user $username');
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatterScreen(
+              token: accessToken,
+              username: decodedToken['preferred_username'],
+              email: decodedToken['email'],
+              sessionState: sessionState,
+            ),
+          ),
         );
-
-        final tokenData = json.decode(tokenResponse.body);
-        final token = tokenData['access_token'];
-
-        setState(() {
-          _token = token ?? '';
-        });
-
-        if (_token.isNotEmpty) {
-          final decodedToken = JwtDecoder.decode(_token);
-          print('Token: $_token');
-          print('Decoded Token: $decodedToken');
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ChatterScreen()),
-          );
-        }
-      } catch (e) {
-        print('Error: $e');
-        setState(() {
-          _token = '';
-        });
+      } else {
+        throw Exception('Access token is empty');
       }
-    } else {
-      throw Exception('Authorization code is null');
+    } catch (e) {
+      print('Error during token exchange: $e');
+      setState(() {
+        TokenManager.clearTokens();
+      });
+      throw Exception('Failed to obtain access token');
     }
-
-    throw Exception('Authorization code is null');
   }
 
   @override
@@ -384,13 +909,33 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: ElevatedButton(
-          child: Text('Login with Keycloak'),
-          onPressed: () async {
-            final httpClient = await createClient();
-          },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextField(
+              controller: _usernameController,
+              decoration: InputDecoration(labelText: 'Username'),
+            ),
+            TextField(
+              controller: _passwordController,
+              decoration: InputDecoration(labelText: 'Password'),
+              obscureText: true,
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              child: Text('Login with Keycloak'),
+              onPressed: () async {
+                try {
+                  await createClient();
+                } catch (e) {
+                  print('Error during login: $e');
+                }
+              },
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
