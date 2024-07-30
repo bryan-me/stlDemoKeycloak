@@ -765,6 +765,11 @@ import 'package:logging/logging.dart';
 import 'package:oauth2_test/chatterscreen.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 
 // Global Token Manager
@@ -794,7 +799,7 @@ class ApplicationHttpOverrides extends HttpOverrides {
   }
 }
 
-void main() {
+void main() async {
   HttpOverrides.global = ApplicationHttpOverrides();
 
   Logger.root.onRecord.listen((record) {
@@ -803,6 +808,16 @@ void main() {
     }
   });
   WidgetsFlutterBinding.ensureInitialized();
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  
   runApp(WeatherForecastApplication());
 }
 
