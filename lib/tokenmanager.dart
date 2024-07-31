@@ -1,19 +1,19 @@
 class TokenManager {
   static String? accessToken;
   static String? refreshToken;
-  static String? sessionState;
+  static String? sub;
 
-  static void setTokens(String access, String refresh, String session) {
+  static void setTokens(String access, String refresh, String sub) {
     accessToken = access;
     refreshToken = refresh;
-    sessionState = session;
-    print('Tokens set. Session State: $sessionState');
+    sub = sub;
+    print('Tokens set. Session State: $sub');
   }
 
   static void clearTokens() {
     accessToken = null;
     refreshToken = null;
-    sessionState = null;
+    sub = null;
     print('Tokens cleared.');
   }
 }

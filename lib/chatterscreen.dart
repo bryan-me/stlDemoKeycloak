@@ -183,7 +183,7 @@
 //                   child:Padding(
 //                     padding: const EdgeInsets.all(10.0),
 //                     child: Icon(Icons.send,color: Colors.white,),
-//                   ) 
+//                   )
 //                   // Text(
 //                   //   'Send',
 //                   //   style: kSendButtonTextStyle,
@@ -227,7 +227,7 @@
 //               children: messageWidgets,
 //             ),
 //           );
-//         } 
+//         }
 //         else {
 //           return Center(
 //             child:
@@ -287,8 +287,6 @@
 //     );
 //   }
 // }
-
-
 
 // import 'package:flutter/material.dart';
 // import 'package:http/http.dart' as http;
@@ -564,7 +562,6 @@
 //   }
 // }
 
-
 // import 'dart:convert';
 // import 'package:centrifuge/centrifuge.dart' as centrifuge;
 // import 'package:http/http.dart' as http;
@@ -573,9 +570,6 @@
 // import 'package:oauth2_test/service/client/client.dart';
 // import 'package:oauth2_test/tokenmanager.dart';
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-
-
 
 // class ChatterScreen extends StatefulWidget {
 //   final String token;
@@ -589,8 +583,6 @@
 //     required this.email,
 //     required this.sessionState,
 //   });
-
-  
 
 //   @override
 //   _ChatterScreenState createState() => _ChatterScreenState();
@@ -638,7 +630,6 @@
 //   });
 // }
 
-
 //   void initNotifications() {
 //     flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 //     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -647,8 +638,6 @@
 //         InitializationSettings(android: initializationSettingsAndroid);
 //     flutterLocalNotificationsPlugin.initialize(initializationSettings);
 //   }
-
-
 
 // //     const AndroidNotificationDetails androidPlatformChannelSpecifics =
 // //         AndroidNotificationDetails(
@@ -982,11 +971,6 @@
 //   }
 // }
 
-
-
-
-
-
 // import 'dart:convert';
 // import 'package:centrifuge/centrifuge.dart' as centrifuge;
 // import 'package:http/http.dart' as http;
@@ -995,8 +979,6 @@
 // import 'package:oauth2_test/constants.dart';
 // import 'package:oauth2_test/tokenmanager.dart';
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-
 
 // class ChatterScreen extends StatefulWidget {
 //   final String token;
@@ -1041,7 +1023,6 @@
 //     flutterLocalNotificationsPlugin.initialize(initializationSettings);
 //   }
 
-
 //   Future<void> connectToCentrifugo() async {
 //     final url = Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
 //     final headers = {
@@ -1075,9 +1056,6 @@
 //         }
 //       };
 
-
-      
-
 //         // Create Centrifugo client with WebSocket URL
 //         centrifugoClient = centrifuge.createClient(
 //           'wss://smpp.stlghana.com/connection/websocket?token=$centrifugoToken&id=1',
@@ -1085,17 +1063,15 @@
 //             token: centrifugoToken,
 //           ),
 //         );
-        
+
 //         print('$centrifugoClient');
 
-//         centrifugoClient.connecting.listen(onEvent); 
+//         centrifugoClient.connecting.listen(onEvent);
 //         centrifugoClient.connected.listen(onEvent);
 //         centrifugoClient.disconnected.listen(onEvent);
 //         centrifugoClient.error.listen(onError);
 
-
 //         await centrifugoClient.connect();
-
 
 //         final onSubscriptionEvent = (dynamic event) async {
 //           print('subscription> $event');
@@ -1112,7 +1088,6 @@
 //         subscription.unsubscribed.listen(onSubscriptionEvent);
 //         subscription.error.listen(onSubscriptionError);
 
-
 //         await subscription.subscribe();
 //       } else {
 //         print('Failed to fetch Centrifugo credentials');
@@ -1121,7 +1096,6 @@
 //       print('Error fetching Centrifugo credentials: $e');
 //     }
 //   }
-
 
 //   void _onNewMessage(centrifuge.PublicationEvent event) {
 //     try {
@@ -1144,7 +1118,6 @@
 //       print('Error parsing message: $e');
 //     }
 //   }
-
 
 //   Future<void> _showNotification(String message) async {
 //     const AndroidNotificationDetails androidPlatformChannelSpecifics =
@@ -1479,7 +1452,6 @@
 //   }
 // }
 
-
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
@@ -1493,13 +1465,13 @@ class ChatterScreen extends StatefulWidget {
   final String token;
   final String username;
   final String email;
-  final String sessionState;
+  final String sub;
 
   ChatterScreen({
     required this.token,
     required this.username,
     required this.email,
-    required this.sessionState,
+    required this.sub,
   });
 
   @override
@@ -1517,7 +1489,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
   @override
   void initState() {
     super.initState();
-    print('Session State in ChatterScreen: ${widget.sessionState}');
+    print('Session State in ChatterScreen: ${widget.sub}');
     getMessages();
     connectToCentrifugo();
     initNotifications();
@@ -1533,7 +1505,8 @@ class _ChatterScreenState extends State<ChatterScreen> {
   }
 
   Future<void> connectToCentrifugo() async {
-    final url = Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
+    final url =
+        Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
     final headers = {
       'Authorization': 'Bearer ${widget.token}',
       'Content-Type': 'application/json',
@@ -1586,9 +1559,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
         // Subscribe to downSitesMonitor channel
         final subscribeMessage = jsonEncode({
           "method": 1,
-          "params": {
-            "channel": "save"
-          },
+          "params": {"channel": "save"},
           "id": 2
         });
         channel.sink.add(subscribeMessage);
@@ -1614,12 +1585,12 @@ class _ChatterScreenState extends State<ChatterScreen> {
           if (dataWrapper != null && dataWrapper.containsKey('data')) {
             final data = dataWrapper['data'] as Map<String, dynamic>?;
 
-            final messageContent = data?['message'] as String? ?? 'Null message';
+            final messageContent =
+                data?['message'] as String? ?? 'Null message';
             // final status = data?['status'] as String? ?? 'Unknown status';
 
             // onMessageReceived('Site: $messageContent, Status: $status', 'System');
-              onMessageReceived('$messageContent', 'User');
-
+            onMessageReceived('$messageContent', 'User');
           } else {
             print('No "data" key in dataWrapper');
           }
@@ -1671,7 +1642,8 @@ class _ChatterScreenState extends State<ChatterScreen> {
   }
 
   Future<void> getMessages() async {
-    final url = Uri.parse('http://192.168.250.209:7300/api/v1/messages/findAll');
+    final url =
+        Uri.parse('http://192.168.250.209:7300/api/v1/messages/findAll');
     final headers = {
       'Authorization': 'Bearer ${widget.token}',
     };
@@ -1719,7 +1691,8 @@ class _ChatterScreenState extends State<ChatterScreen> {
       return;
     }
 
-    final url = Uri.parse('http://192.168.250.209:7300/api/v1/messages/create-message');
+    final url =
+        Uri.parse('http://192.168.250.209:7300/api/v1/messages/create-message');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ${widget.token}',
@@ -1751,7 +1724,8 @@ class _ChatterScreenState extends State<ChatterScreen> {
         });
         _scrollToBottom();
       } else {
-        print('Failed to send message: ${response.statusCode} ${response.body}');
+        print(
+            'Failed to send message: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       print('Error sending message: $e');
@@ -1767,17 +1741,18 @@ class _ChatterScreenState extends State<ChatterScreen> {
   }
 
   Future<void> logout() async {
-    final sessionState = widget.sessionState;
-    if (sessionState.isEmpty) {
+    final sub = widget.sub;
+    if (sub.isEmpty) {
       print('No session state found.');
       return;
     }
 
-    final logoutEndpoint = Uri.parse('http://192.168.250.209:8070/auth/admin/realms/Push/sessions/$sessionState');
+    final logoutEndpoint = Uri.parse(
+        'http://192.168.250.209:8070/auth/admin/realms/Push/users/$sub/sessions');
     print('Logging out from: $logoutEndpoint with token: ${widget.token}');
 
     try {
-      final response = await http.delete(
+      final response = await http.get(
         logoutEndpoint,
         headers: {
           'Authorization': 'Bearer ${widget.token}',
@@ -1788,10 +1763,13 @@ class _ChatterScreenState extends State<ChatterScreen> {
       print('Logout response status: ${response.statusCode}');
       print('Logout response body: ${response.body}');
 
+      Navigator.pushReplacementNamed(
+          context, '/'); // Adjust the route as needed
       if (response.statusCode == 204) {
         print('Logout successful.');
         TokenManager.clearTokens();
-        Navigator.pushReplacementNamed(context, '/'); // Adjust the route as needed
+        Navigator.pushReplacementNamed(
+            context, '/'); // Adjust the route as needed
       } else {
         print('Logout failed: ${response.body}');
       }
@@ -1800,7 +1778,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
     }
   }
 
-   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -1814,8 +1792,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
               backgroundColor: Colors.blue[100],
             ),
             decoration: BoxDecoration(
-                color: Colors.blue,
-                borderRadius: BorderRadius.circular(20)),
+                color: Colors.blue, borderRadius: BorderRadius.circular(20)),
             constraints: BoxConstraints.expand(height: 1),
           ),
         ),
@@ -1838,9 +1815,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
                 Text(
                   'by SuperTech',
                   style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 8,
-                      color: Colors.blue),
+                      fontFamily: 'Poppins', fontSize: 8, color: Colors.blue),
                 )
               ],
             ),
@@ -1924,7 +1899,8 @@ class MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
-        crossAxisAlignment: user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: <Widget>[
           Material(
             borderRadius: BorderRadius.only(
@@ -1971,16 +1947,12 @@ class ChatStream extends StatelessWidget {
   }
 }
 
-
-
-
 // import 'dart:convert';
 // import 'package:flutter/material.dart';
 // import 'package:logging/logging.dart';
 // import 'package:http/http.dart' as http;
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 // import 'package:oauth2_test/service/client/centrifugomanager.dart';
-
 
 // class ChatterScreen extends StatefulWidget {
 //   final String token;
@@ -2303,4 +2275,3 @@ class ChatStream extends StatelessWidget {
 //     );
 //   }
 // }
-

@@ -218,9 +218,6 @@
 //   }
 // }
 
-
-
-
 // import 'dart:io';
 // import 'dart:convert';
 // import 'package:chopper/chopper.dart';
@@ -297,7 +294,7 @@
 //         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/auth?client_id=$clientId&redirect_uri=$redirectUri&response_type=code&scope=openid');
 //     final tokenEndpoint = Uri.parse(
 //         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/token');
-    
+
 //     var grant = oauth2.AuthorizationCodeGrant(
 //       clientId,
 //       authorizationEndpoint,
@@ -395,7 +392,6 @@
 //   }
 // }
 
-
 // THIS WORKS BUT THERES A PROBLEM WITH THE TOKEN EXCAHNGE
 // import 'dart:io';
 // import 'dart:convert';
@@ -473,7 +469,7 @@
 //         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/auth?client_id=$clientId&redirect_uri=$redirectUri&response_type=code&scope=openid');
 //     final tokenEndpoint = Uri.parse(
 //         'http://192.168.250.209:8070/auth/realms/Push/protocol/openid-connect/token');
-    
+
 //     var grant = oauth2.AuthorizationCodeGrant(
 //       clientId,
 //       authorizationEndpoint,
@@ -586,7 +582,6 @@
 //     );
 //   }
 // }
-
 
 // import 'dart:convert';
 // import 'dart:io';
@@ -754,8 +749,6 @@
 //   }
 // }
 
-
-
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -763,31 +756,30 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:oauth2_test/chatterscreen.dart';
+import 'package:oauth2_test/widgets/dynamic_form.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
-
 
 // Global Token Manager
 class TokenManager {
   static String? accessToken;
   static String? refreshToken;
-  static String? sessionState;
+  static String? sub;
 
-  static void setTokens(String access, String refresh, String session) {
+  static void setTokens(String access, String refresh, String sub) {
     accessToken = access;
     refreshToken = refresh;
-    sessionState = session;
+    sub = sub;
   }
 
   static void clearTokens() {
     accessToken = null;
     refreshToken = null;
-    sessionState = null;
+    sub = null;
   }
 }
 
@@ -817,7 +809,6 @@ void main() async {
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
-  
   runApp(WeatherForecastApplication());
 }
 
@@ -830,7 +821,8 @@ class WeatherForecastApplication extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'STL Notification Demo'),
+      home: DynamicForm()
+      // MyHomePage(title: 'STL Notification Demo'),
     );
   }
 }
@@ -876,22 +868,22 @@ class _MyHomePageState extends State<MyHomePage> {
       );
 
       print('Token response: ${tokenResponse.body}');
-       final tokenData = json.decode(tokenResponse.body);
-    final accessToken = tokenData['access_token'];
-    final refreshToken = tokenData['refresh_token'];
-    final decodedToken = JwtDecoder.decode(accessToken);
-    final sessionState = decodedToken['session_state'];
+      final tokenData = json.decode(tokenResponse.body);
+      final accessToken = tokenData['access_token'];
+      final refreshToken = tokenData['refresh_token'];
+      final decodedToken = JwtDecoder.decode(accessToken);
+      final sub = decodedToken['sub'];
 
       if (accessToken != null && accessToken.isNotEmpty) {
-      setState(() {
-        TokenManager.setTokens(accessToken, refreshToken, sessionState);
-      });
+        setState(() {
+          TokenManager.setTokens(accessToken, refreshToken, sub);
+        });
 
-      print('Access token: $accessToken');
-      print('Session State: $sessionState');
-      print('Decoded Token: $decodedToken');
+        print('Access token: $accessToken');
+        print('Session State: $sub');
+        print('Decoded Token: $decodedToken');
 
-      logger.info('Login successful for user $username');
+        logger.info('Login successful for user $username');
 
         Navigator.push(
           context,
@@ -900,7 +892,7 @@ class _MyHomePageState extends State<MyHomePage> {
               token: accessToken,
               username: decodedToken['preferred_username'],
               email: decodedToken['email'],
-              sessionState: sessionState,
+              sub: sub,
             ),
           ),
         );
@@ -919,38 +911,99 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            TextField(
-              controller: _usernameController,
-              decoration: InputDecoration(labelText: 'Username'),
+        resizeToAvoidBottomInset: false,
+        body: Container(
+          color: Colors.blue,
+          child: Center(
+            child: Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              elevation: 20,
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                      Text(
+                      'Login',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(
+                      height: 40,
+                    ),
+                    TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        hintText: "Username",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                        fillColor: Colors.blue.withOpacity(0.1),
+                        filled: true,
+                        prefixIcon: const Icon(Icons.person),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        hintText: "Password",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                        fillColor: Colors.blue.withOpacity(0.1),
+                        filled: true,
+                        prefixIcon: const Icon(Icons.lock),
+                      ),
+                      obscureText: true,
+                    ),
+                    SizedBox(height: 50),
+                    ElevatedButton(
+                      child: Text(
+                        'LOGIN',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                      onPressed: () async {
+                        try {
+                          await createClient();
+                        } catch (e) {
+                          print('Error during login: $e');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.blue.shade800,
+                      ),
+                    ),
+                    // ElevatedButton(
+                    //   child: Text('Login with Keycloak'),
+                    //   onPressed: () async {
+                    //     try {
+                    //       await createClient();
+                    //     } catch (e) {
+                    //       print('Error during login: $e');
+                    //     }
+                    //   },
+                    // ),
+                  ],
+                ),
+              ),
             ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              child: Text('Login with Keycloak'),
-              onPressed: () async {
-                try {
-                  await createClient();
-                } catch (e) {
-                  print('Error during login: $e');
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }
-
