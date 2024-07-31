@@ -756,6 +756,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:oauth2_test/chatterscreen.dart';
+import 'package:oauth2_test/screens/form_screen.dart';
 import 'package:oauth2_test/widgets/dynamic_form.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
@@ -821,8 +822,7 @@ class WeatherForecastApplication extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: DynamicForm()
-      // MyHomePage(title: 'STL Notification Demo'),
+      home: MyHomePage(title: 'STL Notification Demo'),
     );
   }
 }
