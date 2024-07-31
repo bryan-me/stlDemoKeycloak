@@ -1906,6 +1906,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
       ),
     );
   }
+  
 }
 
 class MessageBubble extends StatelessWidget {
