@@ -756,7 +756,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:oauth2_test/chatterscreen.dart';
+import 'package:oauth2_test/navigation_menu.dart';
 import 'package:oauth2_test/screens/form_screen.dart';
+import 'package:oauth2_test/tokenmanager.dart';
 import 'package:oauth2_test/widgets/dynamic_form.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
@@ -765,24 +767,23 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-// Global Token Manager
-class TokenManager {
-  static String? accessToken;
-  static String? refreshToken;
-  static String? sub;
+// class TokenManager {
+//   static String? accessToken;
+//   static String? refreshToken;
+//   static String? sub;
 
-  static void setTokens(String access, String refresh, String sub) {
-    accessToken = access;
-    refreshToken = refresh;
-    sub = sub;
-  }
+//   static void setTokens(String access, String refresh, String sub) {
+//     accessToken = access;
+//     refreshToken = refresh;
+//     sub = sub;
+//   }
 
-  static void clearTokens() {
-    accessToken = null;
-    refreshToken = null;
-    sub = null;
-  }
-}
+//   static void clearTokens() {
+//     accessToken = null;
+//     refreshToken = null;
+//     sub = null;
+//   }
+// }
 
 class ApplicationHttpOverrides extends HttpOverrides {
   @override

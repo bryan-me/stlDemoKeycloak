@@ -1453,6 +1453,7 @@
 // }
 
 import 'dart:convert';
+import 'package:oauth2_test/screens/dynamic_form_screen.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -1824,6 +1825,15 @@ class _ChatterScreenState extends State<ChatterScreen> {
         actions: <Widget>[
           GestureDetector(
             child: Icon(Icons.more_vert),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DynamicFormScreen(
+                      formId: '3e150ea3-cf74-4cf3-8e69-40924abb9c4a'),
+                ),
+              );
+            },
           )
         ],
       ),
