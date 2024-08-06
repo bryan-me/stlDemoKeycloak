@@ -100,7 +100,7 @@
 class ApiResponse {
   final int statusCode;
   final String message;
-  final FormData data;
+  final List<FormData> data;
 
   ApiResponse({
     required this.statusCode,
@@ -109,10 +109,13 @@ class ApiResponse {
   });
 
   factory ApiResponse.fromJson(Map<String, dynamic> json) {
+    var list = json['data'] as List;
+    List<FormData> formsList = list.map((i) => FormData.fromJson(i)).toList();
+
     return ApiResponse(
       statusCode: json['statusCode'],
       message: json['message'],
-      data: FormData.fromJson(json['data']),
+      data: formsList,
     );
   }
 }
@@ -122,23 +125,27 @@ class FormData {
   final String name;
   final int version;
   final List<FormDetails> formDetails;
+  final bool? isEnabled;
 
   FormData({
     required this.id,
     required this.name,
     required this.version,
     required this.formDetails,
+    this.isEnabled,
   });
 
   factory FormData.fromJson(Map<String, dynamic> json) {
     var list = json['formDetails'] as List;
-    List<FormDetails> formDetailsList = list.map((i) => FormDetails.fromJson(i)).toList();
+    List<FormDetails> formDetailsList =
+        list.map((i) => FormDetails.fromJson(i)).toList();
 
     return FormData(
       id: json['id'],
       name: json['name'],
       version: json['version'],
       formDetails: formDetailsList,
+      isEnabled: json['isEnabled'],
     );
   }
 }
@@ -152,12 +159,12 @@ class FormDetails {
   final String defaultValue;
   final String placeholder;
   final String fieldType;
-  final String constraints;
+  final String? constraints;
   final String key;
-  final String createdBy;
-  final String createdAt;
-  final String updatedBy;
-  final String updatedAt;
+  final String? createdBy;
+  final String? createdAt;
+  final String? updatedBy;
+  final String? updatedAt;
 
   FormDetails({
     required this.id,
@@ -168,12 +175,12 @@ class FormDetails {
     required this.defaultValue,
     required this.placeholder,
     required this.fieldType,
-    required this.constraints,
+    this.constraints,
     required this.key,
-    required this.createdBy,
-    required this.createdAt,
-    required this.updatedBy,
-    required this.updatedAt,
+    this.createdBy,
+    this.createdAt,
+    this.updatedBy,
+    this.updatedAt,
   });
 
   factory FormDetails.fromJson(Map<String, dynamic> json) {
