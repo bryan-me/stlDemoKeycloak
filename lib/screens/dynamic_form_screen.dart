@@ -863,192 +863,203 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     _latitudeController.text = position.latitude.toString();
   }
 
-  Widget buildForm(List<FormDetails> formDetails) {
-    List<Widget> formFields = [];
+ Widget buildForm(List<FormDetails> formDetails) {
+  List<Widget> formFields = [];
 
-    for (var field in formDetails) {
-      formFields.add(Text(field.fieldLabel));
-      switch (field.fieldType) {
-        case 'RADIO':
-          formFields.add(RadioListTile<bool>(
-            title: Text(field.fieldLabel),
-            value: true,
-            groupValue: null,
-            onChanged: (value) {},
-          ));
-          break;
-        case 'TEXTAREA':
-          formFields.add(TextFormField(
-            decoration: InputDecoration(
-              hintText: field.placeholder,
-            ),
-          ));
-          break;
-        case 'DROPDOWN':
-          formFields.add(DropdownButtonFormField<String>(
-            items: field.fieldOptions.entries.map((entry) {
-              return DropdownMenuItem<String>(
-                value: entry.key,
-                child: Text(entry.value),
-              );
-            }).toList(),
-            onChanged: (value) {},
-            hint: Text(field.placeholder),
-          ));
-          break;
-        case 'CHECKBOX':
-          formFields.addAll(field.fieldOptions.entries.map((entry) {
-            return CheckboxListTile(
-              title: Text(entry.value),
-              value: _checkboxValues[entry.key] ?? false,
-              onChanged: (value) {
-                setState(() {
-                  _checkboxValues[entry.key] = value ?? false;
-                });
-              },
+  for (var field in formDetails) {
+    formFields.add(Text(field.fieldLabel));
+    switch (field.fieldType.toUpperCase()) {
+      case 'RADIO':
+        formFields.addAll(field.fieldOptions.map((option) {
+          String optionKey = option.keys.first;
+          String optionValue = option.values.first;
+          return RadioListTile<String>(
+            title: Text(optionValue),
+            value: optionKey,
+            groupValue: null, // Update this based on your state management
+            onChanged: (value) {
+              // Handle radio button change
+            },
+          );
+        }).toList());
+        break;
+      case 'TEXTAREA':
+        formFields.add(TextFormField(
+          decoration: InputDecoration(
+            hintText: field.placeholder,
+          ),
+        ));
+        break;
+      case 'DROPDOWN':
+        formFields.add(DropdownButtonFormField<String>(
+          items: field.fieldOptions.map((option) {
+            String optionKey = option.keys.first;
+            String optionValue = option.values.first;
+            return DropdownMenuItem<String>(
+              value: optionKey,
+              child: Text(optionValue),
             );
-          }).toList());
-          break;
-        case 'LOCATION':
-          formFields.add(Column(
-            children: [
-              TextFormField(
-                controller: _longitudeController,
-                decoration: InputDecoration(
-                  labelText: 'Longitude',
+          }).toList(),
+          onChanged: (value) {
+            // Handle dropdown change
+          },
+          hint: Text(field.placeholder),
+        ));
+        break;
+      case 'CHECKBOX':
+        formFields.addAll(field.fieldOptions.map((option) {
+          String optionKey = option.keys.first;
+          String optionValue = option.values.first;
+          return CheckboxListTile(
+            title: Text(optionValue),
+            value: _checkboxValues[optionKey] ?? false,
+            onChanged: (value) {
+              setState(() {
+                _checkboxValues[optionKey] = value ?? false;
+              });
+            },
+          );
+        }).toList());
+        break;
+      case 'LOCATION':
+        formFields.add(Column(
+          children: [
+            TextFormField(
+              controller: _longitudeController,
+              decoration: InputDecoration(
+                labelText: 'Longitude',
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+              ],
+            ),
+            TextFormField(
+              controller: _latitudeController,
+              decoration: InputDecoration(
+                labelText: 'Latitude',
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+              ],
+            ),
+            ElevatedButton(
+              onPressed: _getCurrentLocation,
+              child: Text('Get Current Location'),
+            ),
+          ],
+        ));
+        break;
+      case 'SIGNATURE':
+        formFields.add(Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Engineer Signature'),
+            Signature(
+              controller: _engineerSignatureController,
+              height: 150,
+              backgroundColor: Colors.grey[200]!,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _engineerSignatureController.clear();
+                    });
+                  },
+                  child: Text('Clear'),
                 ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-                ],
-              ),
-              TextFormField(
-                controller: _latitudeController,
-                decoration: InputDecoration(
-                  labelText: 'Latitude',
+                ElevatedButton(
+                  onPressed: () async {
+                    final signature = await _engineerSignatureController.toPngBytes();
+                    // Save or handle the signature
+                  },
+                  child: Text('Save'),
                 ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-                ],
-              ),
-              ElevatedButton(
-                onPressed: _getCurrentLocation,
-                child: Text('Get Current Location'),
-              ),
-            ],
-          ));
-          break;
-        case 'SIGNATURE':
-          formFields.add(Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Engineer Signature'),
-              Signature(
-                controller: _engineerSignatureController,
-                height: 150,
-                backgroundColor: Colors.grey[200]!,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _engineerSignatureController.clear();
-                      });
-                    },
-                    child: Text('Clear'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final signature =
-                          await _engineerSignatureController.toPngBytes();
-                      // Save or handle the signature
-                    },
-                    child: Text('Save'),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-              Text('Client Signature'),
-              Signature(
-                controller: _clientSignatureController,
-                height: 150,
-                backgroundColor: Colors.grey[200]!,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _clientSignatureController.clear();
-                      });
-                    },
-                    child: Text('Clear'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final signature =
-                          await _clientSignatureController.toPngBytes();
-                      // Save or handle the signature as needed
-                    },
-                    child: Text('Save'),
-                  ),
-                ],
-              ),
-            ],
-          ));
-          break;
-        case 'IMAGE':
-          formFields.add(Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Take Pictures (at least 3, up to 6)'),
-              GridView.builder(
-                shrinkWrap: true,
-                itemCount: 6,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
+              ],
+            ),
+            SizedBox(height: 20),
+            Text('Client Signature'),
+            Signature(
+              controller: _clientSignatureController,
+              height: 150,
+              backgroundColor: Colors.grey[200]!,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _clientSignatureController.clear();
+                    });
+                  },
+                  child: Text('Clear'),
                 ),
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () async {
-                      final XFile? image =
-                          await _picker.pickImage(source: ImageSource.camera);
-                      setState(() {
-                        if (image != null) {
-                          _images[index] = image;
-                        }
-                      });
-                    },
-                    child: Container(
-                      margin: EdgeInsets.all(4.0),
-                      color: Colors.grey[300],
-                      child: _images[index] == null
-                          ? Icon(Icons.camera_alt)
-                          : Image.file(File(_images[index]!.path)),
-                    ),
-                  );
-                },
+                ElevatedButton(
+                  onPressed: () async {
+                    final signature = await _clientSignatureController.toPngBytes();
+                    // Save or handle the signature as needed
+                  },
+                  child: Text('Save'),
+                ),
+              ],
+            ),
+          ],
+        ));
+        break;
+      case 'IMAGE':
+        formFields.add(Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Take Pictures (at least 3, up to 6)'),
+            GridView.builder(
+              shrinkWrap: true,
+              itemCount: 6,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
               ),
-            ],
-          ));
-          break;
-        default:
-          formFields.add(Text('Unsupported input type: ${field.fieldType}'));
-          break;
-      }
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () async {
+                    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+                    setState(() {
+                      if (image != null) {
+                        _images[index] = image;
+                      }
+                    });
+                  },
+                  child: Container(
+                    margin: EdgeInsets.all(4.0),
+                    color: Colors.grey[300],
+                    child: _images[index] == null
+                        ? Icon(Icons.camera_alt)
+                        : Image.file(File(_images[index]!.path)),
+                  ),
+                );
+              },
+            ),
+          ],
+        ));
+        break;
+      default:
+        formFields.add(Text('Unsupported input type: ${field.fieldType}'));
+        break;
     }
+  }
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+  return Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: SingleChildScrollView(
       child: Column(
         children: formFields,
       ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

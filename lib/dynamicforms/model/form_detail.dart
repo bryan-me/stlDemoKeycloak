@@ -98,25 +98,13 @@
 // }
 
 class ApiResponse {
-  final int statusCode;
-  final String message;
   final List<FormData> data;
 
-  ApiResponse({
-    required this.statusCode,
-    required this.message,
-    required this.data,
-  });
+  ApiResponse({required this.data});
 
   factory ApiResponse.fromJson(Map<String, dynamic> json) {
-    var list = json['data'] as List;
-    List<FormData> formsList = list.map((i) => FormData.fromJson(i)).toList();
-
-    return ApiResponse(
-      statusCode: json['statusCode'],
-      message: json['message'],
-      data: formsList,
-    );
+    List<FormData> formsList = (json['data'] as List).map((i) => FormData.fromJson(i)).toList();
+    return ApiResponse(data: formsList);
   }
 }
 
@@ -137,13 +125,12 @@ class FormData {
 
   factory FormData.fromJson(Map<String, dynamic> json) {
     var list = json['formDetails'] as List;
-    List<FormDetails> formDetailsList =
-        list.map((i) => FormDetails.fromJson(i)).toList();
+    List<FormDetails> formDetailsList = list.map((i) => FormDetails.fromJson(i)).toList();
 
     return FormData(
-      id: json['id'],
-      name: json['name'],
-      version: json['version'],
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      version: json['version'] ?? 0,
       formDetails: formDetailsList,
       isEnabled: json['isEnabled'],
     );
@@ -154,12 +141,12 @@ class FormDetails {
   final String id;
   final int index;
   final String fieldLabel;
-  final Map<String, dynamic> fieldOptions;
+  final List<Map<String, dynamic>> fieldOptions;
   final bool isRequired;
   final String defaultValue;
   final String placeholder;
   final String fieldType;
-  final String? constraints;
+  final List<String> constraints;
   final String key;
   final String? createdBy;
   final String? createdAt;
@@ -175,7 +162,7 @@ class FormDetails {
     required this.defaultValue,
     required this.placeholder,
     required this.fieldType,
-    this.constraints,
+    required this.constraints,
     required this.key,
     this.createdBy,
     this.createdAt,
@@ -185,16 +172,16 @@ class FormDetails {
 
   factory FormDetails.fromJson(Map<String, dynamic> json) {
     return FormDetails(
-      id: json['id'],
-      index: json['index'],
-      fieldLabel: json['fieldLabel'],
-      fieldOptions: json['fieldOptions'],
-      isRequired: json['isRequired'],
-      defaultValue: json['defaultValue'],
-      placeholder: json['placeholder'],
-      fieldType: json['fieldType'],
-      constraints: json['constraints'],
-      key: json['key'],
+      id: json['id'] ?? '',
+      index: json['index'] ?? 0,
+      fieldLabel: json['fieldLabel'] ?? '',
+      fieldOptions: (json['fieldOptions'] as List).map((e) => e as Map<String, dynamic>).toList(),
+      isRequired: json['isRequired'] ?? false,
+      defaultValue: json['defaultValue'] ?? '',
+      placeholder: json['placeholder'] ?? '',
+      fieldType: json['fieldType'] ?? '',
+      constraints: List<String>.from(json['constraints'] ?? []),
+      key: json['key'] ?? '',
       createdBy: json['createdBy'],
       createdAt: json['createdAt'],
       updatedBy: json['updatedBy'],
