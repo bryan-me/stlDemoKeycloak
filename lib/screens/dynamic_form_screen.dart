@@ -716,11 +716,18 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   // Save form data to SharedPreferences
 Future<void> _saveFormData(String formId) async {
   final prefs = await SharedPreferences.getInstance();
+  // Convert images to their paths or other identifiers
+  List<String?> imagePaths = _images.map((xFile) => xFile?.path).toList();
+
   prefs.setString('formData_$formId', json.encode({
     'radioGroupValues': _radioGroupValues,
     'checkboxGroupValues': _checkboxGroupValues.map((key, value) =>
       MapEntry(key, value.map((k, v) => MapEntry(k, v)))
     ),
+    'longitude': _longitudeController.text,
+    'latitude': _latitudeController.text,
+    'images': imagePaths,
+    // You need to handle saving signatures as bytes or another suitable format
     // Add other fields like text inputs, signatures, images, etc.
   }));
 }
