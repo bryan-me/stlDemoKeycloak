@@ -753,6 +753,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:oauth2_test/chatterscreen.dart';
@@ -794,6 +796,7 @@ class ApplicationHttpOverrides extends HttpOverrides {
 
 void main() async {
   HttpOverrides.global = ApplicationHttpOverrides();
+  await Hive.initFlutter();
 
   Logger.root.onRecord.listen((record) {
     if (kReleaseMode) {
