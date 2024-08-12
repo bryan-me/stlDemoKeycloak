@@ -225,7 +225,9 @@ Future<ApiResponse> fetchForms() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Forms')),
+      appBar: AppBar(
+        title: Text('Forms')
+        ),
       body: FutureBuilder<ApiResponse>(
         future: _formsResponse,
         builder: (context, snapshot) {

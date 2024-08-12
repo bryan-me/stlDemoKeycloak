@@ -758,6 +758,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:oauth2_test/chatterscreen.dart';
+import 'package:oauth2_test/screens/bottomnav.dart';
 import 'package:oauth2_test/screens/form_screen.dart';
 import 'package:oauth2_test/tokenmanager.dart';
 import 'package:oauth2_test/widgets/dynamic_form.dart';
@@ -767,24 +768,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
-
-// class TokenManager {
-//   static String? accessToken;
-//   static String? refreshToken;
-//   static String? sub;
-
-//   static void setTokens(String access, String refresh, String sub) {
-//     accessToken = access;
-//     refreshToken = refresh;
-//     sub = sub;
-//   }
-
-//   static void clearTokens() {
-//     accessToken = null;
-//     refreshToken = null;
-//     sub = null;
-//   }
-// }
 
 class ApplicationHttpOverrides extends HttpOverrides {
   @override
@@ -813,10 +796,10 @@ void main() async {
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
-  runApp(WeatherForecastApplication());
+  runApp(DemoApp());
 }
 
-class WeatherForecastApplication extends StatelessWidget {
+class DemoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -829,6 +812,8 @@ class WeatherForecastApplication extends StatelessWidget {
     );
   }
 }
+
+
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
@@ -891,12 +876,13 @@ class _MyHomePageState extends State<MyHomePage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ChatterScreen(
-              token: accessToken,
-              username: decodedToken['preferred_username'],
-              email: decodedToken['email'],
-              sub: sub,
-            ),
+            builder: (context) => BottomNavigation()
+            // ChatterScreen(
+            //   token: accessToken,
+            //   username: decodedToken['preferred_username'],
+            //   email: decodedToken['email'],
+            //   sub: sub,
+            // ),
           ),
         );
       } else {
