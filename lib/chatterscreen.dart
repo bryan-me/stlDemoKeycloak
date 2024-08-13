@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:oauth2_test/screens/form_list.dart';
+import 'package:oauth2_test/widgets/internet_status.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -359,11 +360,13 @@ class _ChatterScreenState extends State<ChatterScreen> {
                       fontSize: 16,
                       color: Colors.blue.shade800),
                 ),
-                Text(
-                  'by SuperTech',
-                  style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 8, color: Colors.blue),
-                )
+                // Check internet status
+                    InternetStatusWidget(),
+                // Text(
+                //   'by SuperTech',
+                //   style: TextStyle(
+                //       fontFamily: 'Poppins', fontSize: 8, color: Colors.blue),
+                // )
               ],
             ),
           ],

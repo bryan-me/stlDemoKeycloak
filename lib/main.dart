@@ -9,6 +9,7 @@ import 'package:logging/logging.dart';
 import 'package:oauth2_test/dynamicforms/model/form_model.dart';
 import 'package:oauth2_test/screens/bottomnav.dart';
 import 'package:oauth2_test/tokenmanager.dart';
+import 'package:oauth2_test/widgets/internet_status.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -168,6 +169,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
+                    // Check internet status
+                    InternetStatusWidget(),
                       Text(
                       'Login',
                       style: TextStyle(

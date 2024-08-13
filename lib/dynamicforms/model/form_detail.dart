@@ -149,6 +149,7 @@ class FormData {
   final String id;
   final String name;
   final int version;
+  // final String title;
   final List<FormDetails> formDetails;
   final bool? isEnabled;
 
@@ -156,9 +157,11 @@ class FormData {
     required this.id,
     required this.name,
     required this.version,
+    // required this.title,
     required this.formDetails,
     this.isEnabled,
   });
+
 
   factory FormData.fromJson(Map<String, dynamic> json) {
     var list = json['formDetails'] as List;
@@ -170,8 +173,11 @@ class FormData {
       version: json['version'] ?? 0,
       formDetails: formDetailsList,
       isEnabled: json['isEnabled'],
+      // title: json['title'],
     );
   }
+
+  // String get title => null;
 }
 
 class FormDetails {
