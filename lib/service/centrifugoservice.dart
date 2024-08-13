@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:centrifuge/centrifuge.dart' as centrifuge;
-import 'dart:convert';
 
 void main() => runApp(MyApp());
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:oauth2_test/chatterscreen.dart';
-
 import 'package:oauth2_test/screens/form_list.dart';
 import 'package:oauth2_test/tokenmanager.dart';
 
@@ -14,14 +13,15 @@ class _BottomNavigationState extends State<BottomNavigation> {
 
   // Ensure the required values are accessible from TokenManager or passed accordingly
   final List<Widget> _widgetOptions = <Widget>[
-    FormListScreen(),// MyHomePage(title: 'Home'), // Home screen
     ChatterScreen(
       token: TokenManager.accessToken ?? '',
       username: username ?? '',
       email: email ?? '',
       sub: TokenManager.sub ?? '',
     ), // Chat screen
-     FormListScreen(), // Form screen (Uncomment when the form screen is ready)
+    FormListScreen(),// MyHomePage(title: 'Home'), // Home screen
+     FormListScreen(),
+     FormListScreen(),  // Form screen (Uncomment when the form screen is ready)
       ChatterScreen(
       token: TokenManager.accessToken ?? '',
       username: username ?? '',
@@ -47,11 +47,15 @@ class _BottomNavigationState extends State<BottomNavigation> {
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+            icon: Icon(Icons.chat),
+            label: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.task),
             label: 'Task',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
+            icon: Icon(Icons.alarm),
             label: 'Incidents',
           ),
           BottomNavigationBarItem(

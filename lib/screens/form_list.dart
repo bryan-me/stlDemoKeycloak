@@ -174,8 +174,10 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:oauth2_test/dynamicforms/model/form_detail.dart';
+import 'package:oauth2_test/dynamicforms/model/form_model.dart';
 import 'package:oauth2_test/tokenmanager.dart';
 import 'dart:convert';
 
@@ -193,41 +195,73 @@ class _FormListScreenState extends State<FormListScreen> {
   void initState() {
     super.initState();
     _formsResponse = fetchForms();
+
+    //check that the form retrived from the database is being saved in hive 
+    checkHiveData();
   }
 
-Future<ApiResponse> fetchForms() async {
-  final token = TokenManager.accessToken;
-  if (token == null) {
-    throw Exception('Not authenticated');
-  }
-
-  final response = await http.get(
-    Uri.parse('http://192.168.250.209:7300/api/v1/messages/findAllForms'),
-    headers: {'Authorization': 'Bearer $token'},
-  );
-
-  if (response.statusCode == 200) {
-    try {
-      final jsonResponse = json.decode(response.body);
-      return ApiResponse.fromJson(jsonResponse);
-    } catch (e) {
-      print('Error parsing response: $e'); // Log the parsing error
-      throw Exception('Failed to parse forms');
+  Future<ApiResponse> fetchForms() async {
+    final token = TokenManager.accessToken;
+    if (token == null) {
+      throw Exception('Not authenticated');
     }
-  } else {
-    // Log response details for debugging
-    print('Failed to load forms: ${response.statusCode}');
-    print('Response body: ${response.body}');
-    throw Exception('Failed to load forms: ${response.statusCode}');
+
+    var formBox = await Hive.openBox<FormModel>('forms');
+    if (formBox.isNotEmpty) {
+      var forms = formBox.values.toList();
+      return ApiResponse(data: forms);
+    }
+
+    final response = await http.get(
+      Uri.parse('http://192.168.250.209:7300/api/v1/messages/findAllForms'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        final jsonResponse = json.decode(response.body);
+        if (jsonResponse is Map<String, dynamic> &&
+            jsonResponse['data'] is List) {
+          var apiResponse = ApiResponse.fromJson(jsonResponse);
+
+          for (var form in apiResponse.data) {
+            // await formBox.put(form.id, form);
+            try {
+              await formBox.put(form.id, form);
+              print('Form saved: ${form.id}');
+            } catch (e) {
+              print('Error saving form: $e');
+            }
+          }
+
+          return apiResponse;
+        } else {
+          throw Exception('Invalid response format');
+        }
+      } catch (e) {
+        print('Error parsing response: $e');
+        throw Exception('Failed to parse forms');
+      }
+    } else {
+      print('Failed to load forms: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      throw Exception('Failed to load forms: ${response.statusCode}');
+    }
   }
-}
+
+//method to check that the form retrived from the database is being saved in hive 
+   Future<void> checkHiveData() async {
+    var formBox = await Hive.openBox<FormModel>('forms');
+    print('Box length: ${formBox.length}');
+    formBox.values.forEach((form) {
+      print('Form ID: ${form.id}, Name: ${form.name}');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Forms')
-        ),
+      appBar: AppBar(title: Text('Forms')),
       body: FutureBuilder<ApiResponse>(
         future: _formsResponse,
         builder: (context, snapshot) {
@@ -245,7 +279,8 @@ Future<ApiResponse> fetchForms() async {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => DynamicFormScreen(formId: form.id),
+                        builder: (context) =>
+                            DynamicFormScreen(formId: form.id),
                       ),
                     );
                   },

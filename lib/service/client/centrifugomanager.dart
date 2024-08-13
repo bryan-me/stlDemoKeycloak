@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart';
 
 class CentrifugoManager {
   final String token;

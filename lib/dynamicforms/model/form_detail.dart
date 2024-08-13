@@ -97,14 +97,51 @@
 //   }
 // }
 
+// class ApiResponse {
+//   final List<FormData> data;
+
+//   ApiResponse({required this.data});
+
+//   factory ApiResponse.fromJson(Map<String, dynamic> json) {
+//     List<FormData> formsList = (json['data'] as List).map((i) => FormData.fromJson(i)).toList();
+//     return ApiResponse(data: formsList);
+//   }
+// }
+import 'package:oauth2_test/dynamicforms/model/form_model.dart';
+
+// class ApiResponse {
+//   List<FormModel> data;
+
+//   ApiResponse({required this.data});
+
+//   factory ApiResponse.fromJson(List<dynamic> json) {
+//     return ApiResponse(
+//       data: json.map((form) => FormModel.fromJson(form)).toList(),
+//     );
+//   }
+
+//   List<Map<String, dynamic>> toJson() {
+//     return data.map((form) => form.toJson()).toList();
+//   }
+// }
+
 class ApiResponse {
-  final List<FormData> data;
+  final List<FormModel> data;
 
   ApiResponse({required this.data});
 
   factory ApiResponse.fromJson(Map<String, dynamic> json) {
-    List<FormData> formsList = (json['data'] as List).map((i) => FormData.fromJson(i)).toList();
-    return ApiResponse(data: formsList);
+    return ApiResponse(
+      data: (json['data'] as List)
+          .map((form) => FormModel.fromJson(form))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'data': data.map((form) => form.toJson()).toList(),
+    };
   }
 }
 
