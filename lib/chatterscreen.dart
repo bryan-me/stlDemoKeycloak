@@ -52,7 +52,78 @@ class _ChatterScreenState extends State<ChatterScreen> {
     flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  Future<void> connectToCentrifugo() async {
+  // Future<void> connectToCentrifugo() async {
+  //   final url =
+  //       Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
+  //   final headers = {
+  //     'Authorization': 'Bearer ${widget.token}',
+  //     'Content-Type': 'application/json',
+  //   };
+
+  //   print('Fetching Centrifugo credentials from: $url with headers: $headers');
+
+  //   try {
+  //     final response = await http.get(url, headers: headers);
+
+  //     print('Response status: ${response.statusCode}');
+  //     print('Response body: ${response.body}');
+
+  //     if (response.statusCode == 200) {
+  //       final Map<String, dynamic> responseData = jsonDecode(response.body);
+  //       final centrifugoToken = responseData['token'];
+
+  //       print('Connecting to Centrifugo with token: $centrifugoToken');
+
+  //       // Create WebSocket channel
+  //       final websocketUrl = 'wss://smpp.stlghana.com/connection/websocket';
+  //       channel = WebSocketChannel.connect(Uri.parse(websocketUrl));
+
+  //       // Listen for messages from the WebSocket
+  //       channel.stream.listen((message) {
+  //         if (message is String) {
+  //           print('Received String message: $message');
+  //           _handleMessage(message);
+  //         } else if (message is List<int>) {
+  //           final decodedMessage = utf8.decode(message);
+  //           print('Received List<int> message: $decodedMessage');
+  //           _handleMessage(decodedMessage);
+  //         }
+  //       }, onError: (error) {
+  //         print('WebSocket error: $error');
+  //       }, onDone: () {
+  //         print('WebSocket connection closed');
+  //       });
+
+  //       // Send authentication message with token and id
+  //       final authMessage = jsonEncode({
+  //         "params": {
+  //           "token": centrifugoToken,
+  //         },
+  //         "id": 1
+  //       });
+  //       channel.sink.add(authMessage);
+  //       print('Sent authentication message: $authMessage');
+
+  //       // Subscribe to downSitesMonitor channel
+  //       final subscribeMessage = jsonEncode({
+  //         "method": 1,
+  //         "params": {"channel": "downSitesMoniitor"},
+  //         "id": 2
+  //       });
+  //       channel.sink.add(subscribeMessage);
+  //       print('Sent subscription message: $subscribeMessage');
+  //       print('WebSocket connection status: ${channel != null}');
+
+  //       // Publish to Channel
+  //     } else {
+  //       print('Failed to fetch Centrifugo credentials');
+  //     }
+  //   } catch (e) {
+  //     print('Error fetching Centrifugo credentials: $e');
+  //   }
+  // }
+
+  void connectToCentrifugo() async {
     final url =
         Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
     final headers = {
@@ -80,12 +151,11 @@ class _ChatterScreenState extends State<ChatterScreen> {
 
         // Listen for messages from the WebSocket
         channel.stream.listen((message) {
+          print('WebSocket message received: $message');
           if (message is String) {
-            print('Received String message: $message');
             _handleMessage(message);
           } else if (message is List<int>) {
             final decodedMessage = utf8.decode(message);
-            print('Received List<int> message: $decodedMessage');
             _handleMessage(decodedMessage);
           }
         }, onError: (error) {
@@ -104,6 +174,9 @@ class _ChatterScreenState extends State<ChatterScreen> {
         channel.sink.add(authMessage);
         print('Sent authentication message: $authMessage');
 
+        // Verify connection before subscribing
+        print('WebSocket connection status: ${channel != null}');
+
         // Subscribe to downSitesMonitor channel
         final subscribeMessage = jsonEncode({
           "method": 1,
@@ -112,8 +185,6 @@ class _ChatterScreenState extends State<ChatterScreen> {
         });
         channel.sink.add(subscribeMessage);
         print('Sent subscription message: $subscribeMessage');
-
-        // Publish to Channel
       } else {
         print('Failed to fetch Centrifugo credentials');
       }
@@ -122,23 +193,55 @@ class _ChatterScreenState extends State<ChatterScreen> {
     }
   }
 
-  void _handleMessage(dynamic message) {
-    try {
-      final messageData = jsonDecode(message) as Map<String, dynamic>?;
+  // void _handleMessage(dynamic message) {
+  //   try {
+  //     final messageData = jsonDecode(message) as Map<String, dynamic>?;
 
-      if (messageData != null && messageData.containsKey('result')) {
-        final result = messageData['result'] as Map<String, dynamic>?;
+  //     if (messageData != null && messageData.containsKey('result')) {
+  //       final result = messageData['result'] as Map<String, dynamic>?;
+  //       if (result != null && result.containsKey('data')) {
+  //         final dataWrapper = result['data'] as Map<String, dynamic>?;
+  //         if (dataWrapper != null && dataWrapper.containsKey('data')) {
+  //           final data = dataWrapper['data'] as Map<String, dynamic>?;
+
+  //           final messageContent =
+  //               data?['message'] as String? ?? 'Null message';
+  //           // final status = data?['status'] as String? ?? 'Unknown status';
+
+  //           // onMessageReceived('Site: $messageContent, Status: $status', 'System');
+  //           onMessageReceived('$messageContent', 'User');
+  //         } else {
+  //           print('No "data" key in dataWrapper');
+  //         }
+  //       } else {
+  //         print('No "data" key in result');
+  //       }
+  //     } else {
+  //       print('No "result" key in messageData');
+  //     }
+  //   } catch (e) {
+  //     print('Error parsing message: $e');
+  //   }
+  // }
+
+  void _handleMessage(dynamic message) {
+  print('Raw message received: $message'); // Log the raw message
+
+  try {
+    final decodedMessage = message is String ? jsonDecode(message) : jsonDecode(utf8.decode(message));
+    
+    if (decodedMessage is Map<String, dynamic>) {
+      if (decodedMessage.containsKey('result')) {
+        final result = decodedMessage['result'] as Map<String, dynamic>?;
+
         if (result != null && result.containsKey('data')) {
           final dataWrapper = result['data'] as Map<String, dynamic>?;
+
           if (dataWrapper != null && dataWrapper.containsKey('data')) {
             final data = dataWrapper['data'] as Map<String, dynamic>?;
 
-            final messageContent =
-                data?['message'] as String? ?? 'Null message';
-            // final status = data?['status'] as String? ?? 'Unknown status';
-
-            // onMessageReceived('Site: $messageContent, Status: $status', 'System');
-            onMessageReceived('$messageContent', 'User');
+            final messageContent = data?['message'] as String? ?? 'Null message';
+            onMessageReceived(messageContent, 'User');
           } else {
             print('No "data" key in dataWrapper');
           }
@@ -146,12 +249,16 @@ class _ChatterScreenState extends State<ChatterScreen> {
           print('No "data" key in result');
         }
       } else {
-        print('No "result" key in messageData');
+        print('No "result" key in decodedMessage');
       }
-    } catch (e) {
-      print('Error parsing message: $e');
+    } else {
+      print('Received message is not a valid JSON object: $decodedMessage');
     }
+  } catch (e) {
+    print('Error parsing message: $e');
   }
+}
+
 
   void onMessageReceived(String messageContent, String sender) {
     final messageBubble = MessageBubble(
@@ -361,7 +468,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
                       color: Colors.blue.shade800),
                 ),
                 // Check internet status
-                    InternetStatusWidget(),
+                InternetStatusWidget(),
                 // Text(
                 //   'by SuperTech',
                 //   style: TextStyle(
@@ -377,11 +484,10 @@ class _ChatterScreenState extends State<ChatterScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => FormListScreen()
-                  // DynamicFormScreen(
-                  //     formId: '871ea5f3-d4d0-4a76-815d-95d1b90756c3'),
-                ),
+                MaterialPageRoute(builder: (context) => FormListScreen()
+                    // DynamicFormScreen(
+                    //     formId: '871ea5f3-d4d0-4a76-815d-95d1b90756c3'),
+                    ),
               );
             },
           )

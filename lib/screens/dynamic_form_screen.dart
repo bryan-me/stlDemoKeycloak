@@ -20,12 +20,16 @@ class DynamicFormScreen extends StatefulWidget {
 }
 
 class _DynamicFormScreenState extends State<DynamicFormScreen> {
+final _formKey = GlobalKey<FormState>();
   Future<FormData>? _formResponse;
+  Map<String, String> _textFieldValues = {};
   Map<String, dynamic> _radioGroupValues = {};
   Map<String, Map<String, bool>> _checkboxGroupValues = {};
-
-  // List to hold SignatureControllers dynamically
   List<SignatureController> _signatureControllers = [];
+  final ImagePicker _picker = ImagePicker();
+  List<XFile?> _images = List<XFile?>.filled(6, null, growable: false);
+  final TextEditingController _longitudeController = TextEditingController();
+  final TextEditingController _latitudeController = TextEditingController();
 
   @override
   void initState() {
@@ -34,12 +38,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     _loadFormData(widget.formId);
   }
 
-  final ImagePicker _picker = ImagePicker();
-  List<XFile?> _images = List<XFile?>.filled(6, null, growable: false);
-
-  // TextEditingController for longitude and latitude
-  final TextEditingController _longitudeController = TextEditingController();
-  final TextEditingController _latitudeController = TextEditingController();
 
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
@@ -121,11 +119,14 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         case 'TEXTAREA':
         case 'INPUT':
           formFields.add(TextFormField(
+            initialValue: _textFieldValues[field.fieldLabel] ?? '',
             decoration: InputDecoration(
               hintText: field.placeholder,
             ),
             onChanged: (value) {
-              // Save text input field value to local storage
+              setState(() {
+                _textFieldValues[field.fieldLabel] = value;
+              });
               _saveFormData(widget.formId);
             },
           ));
@@ -314,28 +315,125 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   //   _clearFormData(widget.formId);
   // }
 
+  // void _submitForm() async {
+  //   if (_validateForm()) {
+  //     try {
+  //       // Gather form data into a Map
+  //       final Map<String, dynamic> payload = {
+  //         ''
+  //         'radioGroupValues': _radioGroupValues,
+  //         'checkboxGroupValues': _checkboxGroupValues,
+  //         'longitude': _longitudeController.text,
+  //         'latitude': _latitudeController.text,
+  //         // Converting images to base64 or file paths
+  //         'images': _images
+  //             .where((image) => image != null)
+  //             .map((image) => base64Encode(File(image!.path).readAsBytesSync()))
+  //             .toList(),
+  //         // Add signatures and other fields as necessary
+  //         // 'signatures': ...,
+  //       };
+
+  //       // final String userId =
+  //       //     '5c4eea26-314e-4602-96e6-a1070cdd1136';
+  //       final String endpoint =
+  //           'http://192.168.250.209:7300/api/v1/messages/submit-form/${widget.formId}';
+
+  //       final response = await http.post(
+  //         Uri.parse(endpoint),
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           'Authorization': 'Bearer ${TokenManager.accessToken}',
+  //         },
+  //         body: json.encode(payload),
+  //       );
+
+  //       if (response.statusCode == 200) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(content: Text('Form submitted successfully!')),
+  //         );
+  //         _clearFormData(
+  //             widget.formId); // Clear saved form data after submission
+  //       } else {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //               content: Text('Failed to submit form: ${response.statusCode}')),
+  //         );
+  //       }
+  //     } catch (e) {
+  //       print('Error submitting form: $e');
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Error submitting form: $e')),
+  //       );
+  //     }
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Please fill in all required fields.')),
+  //     );
+  //   }
+  // }
+
   void _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+    _formKey.currentState!.save();
     if (_validateForm()) {
       try {
-        // Gather form data into a Map
-        final Map<String, dynamic> payload = {
-          'radioGroupValues': _radioGroupValues,
-          'checkboxGroupValues': _checkboxGroupValues,
-          'longitude': _longitudeController.text,
-          'latitude': _latitudeController.text,
-          // Converting images to base64 or file paths
-          'images': _images
-              .where((image) => image != null)
-              .map((image) => base64Encode(File(image!.path).readAsBytesSync()))
-              .toList(),
-          // Add signatures and other fields as necessary
-          // 'signatures': ...,
-        };
+        // Gather form data into a List of Maps (for submitting as a list)
+        final List<Map<String, dynamic>> payload = [];
 
-        // final String userId =
-        //     '5c4eea26-314e-4602-96e6-a1070cdd1136';
+        // Add radio group values
+        _radioGroupValues.forEach((key, value) {
+          payload.add({'key': key, 'value': value});
+        });
+
+        // Add checkbox group values
+        _checkboxGroupValues.forEach((key, value) {
+          value.forEach((optionKey, isSelected) {
+            if (isSelected) {
+              payload.add({'key': key, 'value': optionKey});
+            }
+          });
+        });
+
+        print("Text Field Values: $_textFieldValues");
+
+        // Add text field values
+        _textFieldValues.forEach((key, value) {
+          payload.add({'key': key, 'value': value});
+        });
+
+        // Add location data
+        payload.add({'key': 'Longitude', 'value': _longitudeController.text});
+        payload.add({'key': 'Latitude', 'value': _latitudeController.text});
+
+        // Add images (you can add image paths or base64 strings)
+        for (var i = 0; i < _images.length; i++) {
+          if (_images[i] != null) {
+            payload.add({
+              'key': 'Image ${i + 1}',
+              'value': base64Encode(File(_images[i]!.path).readAsBytesSync())
+            });
+          }
+        }
+
+        // Add signatures (if you need to include them, you'd convert them to a format like base64)
+                  for (var i = 0; i < _signatureControllers.length; i++) {
+            final signatureController = _signatureControllers[i];
+            if (signatureController.isNotEmpty) {
+              final exportedSignature =
+                  await signatureController.toPngBytes();
+              if (exportedSignature != null) {
+                payload.add({
+                  'key': 'Signature${i + 1}',
+                  'value': base64Encode(exportedSignature)
+                });
+              }
+            }
+          }
+
+
         final String endpoint =
-            'http://192.168.250.209:7300/api/v1/messages/submit-form/${widget.formId}';
+            'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
 
         final response = await http.post(
           Uri.parse(endpoint),
@@ -345,6 +443,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
           },
           body: json.encode(payload),
         );
+        print(payload);
 
         if (response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -369,6 +468,11 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         SnackBar(content: Text('Please fill in all required fields.')),
       );
     }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Please fill in all required fields.')),
+    );
+  }
   }
 
   bool _validateForm() {
@@ -378,27 +482,61 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Dynamic Form'),
-      ),
-      body: FutureBuilder<FormData>(
-        future: _formResponse,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return buildForm(snapshot.data!.formDetails);
-          } else {
-            return Center(child: Text('No data'));
-          }
-        },
-      ),
-    );
-  }
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: Text('Dynamic Form'),
+  //     ),
+  //     body: FutureBuilder<FormData>(
+  //       future: _formResponse,
+  //       builder: (context, snapshot) {
+  //         if (snapshot.connectionState == ConnectionState.waiting) {
+  //           return Center(child: CircularProgressIndicator());
+  //         } else if (snapshot.hasError) {
+  //           return Center(child: Text('Error: ${snapshot.error}'));
+  //         } else if (snapshot.hasData) {
+  //           return buildForm(snapshot.data!.formDetails);
+  //         } else {
+  //           return Center(child: Text('No data'));
+  //         }
+  //       },
+  //     ),
+  //   );
+  // }
+  // final _formKey = GlobalKey<FormState>();
+
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('Dynamic Form'),
+    ),
+    body: FutureBuilder<FormData>(
+      future: _formResponse,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (snapshot.hasData) {
+          // Wrap the dynamically generated form fields with a Form widget
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey, 
+                child: buildForm(snapshot.data!.formDetails),
+            ),
+          );
+        } else {
+          return Center(child: Text('No data'));
+        }
+      },
+    ),
+    // floatingActionButton: FloatingActionButton(
+    //   onPressed: _submitForm,
+    //   child: Icon(Icons.save),
+    // ),
+  );
+}
 
   // Future<FormData> fetchFormData(String formId) async {
   //   final token = TokenManager.accessToken;
@@ -427,42 +565,42 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   // }
 
   Future<FormData> fetchFormData(String formId) async {
-  final token = TokenManager.accessToken;
-  if (token == null) {
-    throw Exception('Not authenticated');
-  }
-
-  final response = await http.get(
-    Uri.parse('http://192.168.250.209:7300/api/v1/messages/form/$formId'),
-    headers: {'Authorization': 'Bearer $token'},
-  );
-
-  if (response.statusCode == 200) {
-    try {
-      final jsonBody = json.decode(response.body);
-
-      // Check if 'data' is a list and if it's empty
-      if (jsonBody['data'] is List && (jsonBody['data'] as List).isEmpty) {
-        throw Exception('No form data available');
-      }
-
-      // Assuming 'data' should be a map or at least a non-empty list
-      if (jsonBody['data'] is Map<String, dynamic>) {
-        return FormData.fromJson(jsonBody['data']);
-      } else {
-        throw Exception('Unexpected JSON structure: "data" is not a Map');
-      }
-    } catch (e) {
-      print('Error parsing response: $e');
-      throw Exception('Failed to parse form data');
+    final token = TokenManager.accessToken;
+    if (token == null) {
+      throw Exception('Not authenticated');
     }
-  } else {
-    // Logging response details for debugging
-    print('Failed to load form data: ${response.statusCode}');
-    print('Response body: ${response.body}');
-    throw Exception('Failed to load form data: ${response.statusCode}');
+
+    final response = await http.get(
+      Uri.parse('http://192.168.250.209:7300/api/v1/messages/form/$formId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        final jsonBody = json.decode(response.body);
+
+        // Check if 'data' is a list and if it's empty
+        if (jsonBody['data'] is List && (jsonBody['data'] as List).isEmpty) {
+          throw Exception('No form data available');
+        }
+
+        // Assuming 'data' should be a map or at least a non-empty list
+        if (jsonBody['data'] is Map<String, dynamic>) {
+          return FormData.fromJson(jsonBody['data']);
+        } else {
+          throw Exception('Unexpected JSON structure: "data" is not a Map');
+        }
+      } catch (e) {
+        print('Error parsing response: $e');
+        throw Exception('Failed to parse form data');
+      }
+    } else {
+      // Logging response details for debugging
+      print('Failed to load form data: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      throw Exception('Failed to load form data: ${response.statusCode}');
+    }
   }
-}
 
   // Save form data to SharedPreferences
   Future<void> _saveFormData(String formId) async {
@@ -502,33 +640,33 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   // }
 
   Future<void> _loadFormData(String formId) async {
-  final prefs = await SharedPreferences.getInstance();
-  String? formData = prefs.getString('formData_$formId');
+    final prefs = await SharedPreferences.getInstance();
+    String? formData = prefs.getString('formData_$formId');
 
-  if (formData != null) {
-    try {
-      final data = json.decode(formData);
+    if (formData != null) {
+      try {
+        final data = json.decode(formData);
 
-      // Validate the structure of the loaded data
-      if (data is Map<String, dynamic>) {
-        setState(() {
-          _radioGroupValues =
-              Map<String, dynamic>.from(data['radioGroupValues'] ?? {});
-          _checkboxGroupValues = Map<String, Map<String, bool>>.from(
-              (data['checkboxGroupValues'] ?? {}).map(
-                  (key, value) => MapEntry(key, Map<String, bool>.from(value))));
-          // Load other fields like text inputs, signatures, images, etc.
-        });
-      } else {
-        throw Exception('Invalid local data structure');
+        // Validate the structure of the loaded data
+        if (data is Map<String, dynamic>) {
+          setState(() {
+            _radioGroupValues =
+                Map<String, dynamic>.from(data['radioGroupValues'] ?? {});
+            _checkboxGroupValues = Map<String, Map<String, bool>>.from(
+                (data['checkboxGroupValues'] ?? {}).map((key, value) =>
+                    MapEntry(key, Map<String, bool>.from(value))));
+            // Load other fields like text inputs, signatures, images, etc.
+          });
+        } else {
+          throw Exception('Invalid local data structure');
+        }
+      } catch (e) {
+        print('Error loading saved form data: $e');
+        // Handle the error by clearing the invalid local data
+        await _clearFormData(formId);
       }
-    } catch (e) {
-      print('Error loading saved form data: $e');
-      // Handle the error by clearing the invalid local data
-      await _clearFormData(formId);
     }
   }
-}
 
   // Clear form data from SharedPreferences
   Future<void> _clearFormData(String formId) async {
