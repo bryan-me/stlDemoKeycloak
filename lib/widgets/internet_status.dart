@@ -54,15 +54,29 @@ class _InternetStatusWidgetState extends State<InternetStatusWidget> {
         break;
     }
 
-    return Container(
-      padding: EdgeInsets.all(8.0),
-      color: _connectionStatus == ConnectivityResult.none ? Colors.red : Colors.green,
-      child: Text(
+   return Container(
+  color: _connectionStatus == ConnectivityResult.none ? Colors.red : Colors.green,
+  padding: EdgeInsets.all(8.0), 
+  child: Row(
+    children: [
+      CircleAvatar(
+        radius: 4.0, 
+        backgroundColor: Colors.white, 
+      ),
+      SizedBox(width: 8.0), 
+      Text(
         status,
         style: TextStyle(
-          fontFamily: 'Poppins', fontSize: 10, color: Colors.white),
+          fontFamily: 'Poppins',
+          fontSize: 10,
+          color: Colors.white,
         ),
+      ),
+    ],
+  ),
+);
+
         
-      );
+
   }
 }

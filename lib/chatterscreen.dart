@@ -47,8 +47,15 @@ class _ChatterScreenState extends State<ChatterScreen> {
     flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
+        const DarwinInitializationSettings initializationSettingsDarwin =
+      DarwinInitializationSettings();
+
     const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsDarwin,
+          );
+        
     flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 

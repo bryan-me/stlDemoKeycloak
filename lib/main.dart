@@ -25,6 +25,33 @@ class ApplicationHttpOverrides extends HttpOverrides {
   }
 }
 
+// void main() async {
+//   HttpOverrides.global = ApplicationHttpOverrides();
+//   await Hive.initFlutter();
+
+//   Hive.registerAdapter(FormModelAdapter());
+//   Hive.registerAdapter(FormDetailAdapter());
+//   Hive.registerAdapter(FieldOptionAdapter());
+
+
+//   Logger.root.onRecord.listen((record) {
+//     if (kReleaseMode) {
+//       print('[${record.level.name}] ${record.time}: ${record.message}');
+//     }
+//   });
+//   WidgetsFlutterBinding.ensureInitialized();
+//   const AndroidInitializationSettings initializationSettingsAndroid =
+//       AndroidInitializationSettings('@mipmap/ic_launcher');
+
+//   const InitializationSettings initializationSettings = InitializationSettings(
+//     android: initializationSettingsAndroid,
+//   );
+
+//   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+//   runApp(DemoApp());
+// }
+
 void main() async {
   HttpOverrides.global = ApplicationHttpOverrides();
   await Hive.initFlutter();
@@ -33,18 +60,23 @@ void main() async {
   Hive.registerAdapter(FormDetailAdapter());
   Hive.registerAdapter(FieldOptionAdapter());
 
-
   Logger.root.onRecord.listen((record) {
     if (kReleaseMode) {
       print('[${record.level.name}] ${record.time}: ${record.message}');
     }
   });
+
   WidgetsFlutterBinding.ensureInitialized();
+
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
+  const DarwinInitializationSettings initializationSettingsDarwin =
+      DarwinInitializationSettings();
+
   const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
+    iOS: initializationSettingsDarwin,
   );
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
