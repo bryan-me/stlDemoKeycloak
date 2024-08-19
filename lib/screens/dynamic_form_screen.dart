@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -20,7 +21,7 @@ class DynamicFormScreen extends StatefulWidget {
 }
 
 class _DynamicFormScreenState extends State<DynamicFormScreen> {
-final _formKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   Future<FormData>? _formResponse;
   Map<String, String> _textFieldValues = {};
   Map<String, dynamic> _radioGroupValues = {};
@@ -37,7 +38,6 @@ final _formKey = GlobalKey<FormState>();
     _formResponse = fetchFormData(widget.formId);
     _loadFormData(widget.formId);
   }
-
 
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
@@ -304,236 +304,113 @@ final _formKey = GlobalKey<FormState>();
     );
   }
 
-  // void _submitForm() {
-  //   // Handling form submission, e.g., collect all input data, validate, and send to server
-  //   print('Form Submitted');
-  //   print('Radio Group Values: $_radioGroupValues');
-  //   print('Checkbox Group Values: $_checkboxGroupValues');
-  //   // Handle other form fields like text inputs, signatures, images, etc.
+// Method to get the size of a byte array
+  int _getByteSize(Uint8List? bytes) {
+    return bytes?.lengthInBytes ?? 0;
+  }
 
-  //   // Clear saved form data upon successful submission
-  //   _clearFormData(widget.formId);
-  // }
+    // Method to capture the signature as a byte array
+  Future<Uint8List?> _captureSignature(SignatureController controller) async {
+    if (controller.isNotEmpty) {
+      final Uint8List? signatureBytes = await controller.toPngBytes();
+      return signatureBytes;
+    }
+    return null;
+  }
 
-  // void _submitForm() async {
-  //   if (_validateForm()) {
-  //     try {
-  //       // Gather form data into a Map
-  //       final Map<String, dynamic> payload = {
-  //         ''
-  //         'radioGroupValues': _radioGroupValues,
-  //         'checkboxGroupValues': _checkboxGroupValues,
-  //         'longitude': _longitudeController.text,
-  //         'latitude': _latitudeController.text,
-  //         // Converting images to base64 or file paths
-  //         'images': _images
-  //             .where((image) => image != null)
-  //             .map((image) => base64Encode(File(image!.path).readAsBytesSync()))
-  //             .toList(),
-  //         // Add signatures and other fields as necessary
-  //         // 'signatures': ...,
-  //       };
-
-  //       // final String userId =
-  //       //     '5c4eea26-314e-4602-96e6-a1070cdd1136';
-  //       final String endpoint =
-  //           'http://192.168.250.209:7300/api/v1/messages/submit-form/${widget.formId}';
-
-  //       final response = await http.post(
-  //         Uri.parse(endpoint),
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //           'Authorization': 'Bearer ${TokenManager.accessToken}',
-  //         },
-  //         body: json.encode(payload),
-  //       );
-
-  //       if (response.statusCode == 200) {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(content: Text('Form submitted successfully!')),
-  //         );
-  //         _clearFormData(
-  //             widget.formId); // Clear saved form data after submission
-  //       } else {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(
-  //               content: Text('Failed to submit form: ${response.statusCode}')),
-  //         );
-  //       }
-  //     } catch (e) {
-  //       print('Error submitting form: $e');
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Error submitting form: $e')),
-  //       );
-  //     }
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Please fill in all required fields.')),
-  //     );
-  //   }
-  // }
-
-  // void _submitForm() async {
-  //   if (_formKey.currentState!.validate()) {
-  //   _formKey.currentState!.save();
-  //   if (_validateForm()) {
-  //     try {
-  //       // Gather form data into a List of Maps (for submitting as a list)
-  //       final List<Map<String, dynamic>> payload = [];
-
-  //       // Add radio group values
-  //       _radioGroupValues.forEach((key, value) {
-  //         payload.add({'key': key, 'value': value});
-  //       });
-
-  //       // Add checkbox group values
-  //       _checkboxGroupValues.forEach((key, value) {
-  //         value.forEach((optionKey, isSelected) {
-  //           if (isSelected) {
-  //             payload.add({'key': key, 'value': optionKey});
-  //           }
-  //         });
-  //       });
-
-  //       print("Text Field Values: $_textFieldValues");
-
-  //       // Add text field values
-  //       _textFieldValues.forEach((key, value) {
-  //         payload.add({'key': key, 'value': value});
-  //       });
-
-  //       // Add location data
-  //       payload.add({'key': 'Longitude', 'value': _longitudeController.text});
-  //       payload.add({'key': 'Latitude', 'value': _latitudeController.text});
-
-  //       // Add images (you can add image paths or base64 strings)
-  //       for (var i = 0; i < _images.length; i++) {
-  //         if (_images[i] != null) {
-  //           payload.add({
-  //             'key': 'Image ${i + 1}',
-  //             'value': base64Encode(File(_images[i]!.path).readAsBytesSync())
-  //           });
-  //         }
-  //       }
-
-  //       // Add signatures (if you need to include them, you'd convert them to a format like base64)
-  //                 for (var i = 0; i < _signatureControllers.length; i++) {
-  //           final signatureController = _signatureControllers[i];
-  //           if (signatureController.isNotEmpty) {
-  //             final exportedSignature =
-  //                 await signatureController.toPngBytes();
-  //             if (exportedSignature != null) {
-  //               payload.add({
-  //                 'key': 'Signature${i + 1}',
-  //                 'value': base64Encode(exportedSignature)
-  //               });
-  //             }
-  //           }
-  //         }
-
-
-  //       final String endpoint =
-  //           'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
-
-  //       final response = await http.post(
-  //         Uri.parse(endpoint),
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //           'Authorization': 'Bearer ${TokenManager.accessToken}',
-  //         },
-  //         body: json.encode(payload),
-  //       );
-  //       print(payload);
-
-  //       if (response.statusCode == 200) {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(content: Text('Form submitted successfully!')),
-  //         );
-  //         _clearFormData(
-  //             widget.formId); // Clear saved form data after submission
-  //       } else {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(
-  //               content: Text('Failed to submit form: ${response.statusCode}')),
-  //         );
-  //       }
-  //     } catch (e) {
-  //       print('Error submitting form: $e');
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Error submitting form: $e')),
-  //       );
-  //     }
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Please fill in all required fields.')),
-  //     );
-  //   }
-  // } else {
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     SnackBar(content: Text('Please fill in all required fields.')),
-  //   );
-  // }
-  // }
+  // Method to compress the signature byte array
+  Future<Uint8List?> _compressSignature(Uint8List signatureBytes) async {
+    final Uint8List? compressedBytes =
+        await FlutterImageCompress.compressWithList(
+      signatureBytes,
+      quality: 70, // Adjust quality as needed
+    );
+    return compressedBytes;
+  }
 
   void _submitForm() async {
-  if (_formKey.currentState!.validate()) {
-    _formKey.currentState!.save();
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
 
-    final List<Map<String, dynamic>> payload = [];
+      final List<Map<String, dynamic>> payload = [];
 
-    _textFieldValues.forEach((key, value) {
-      payload.add({
-        'field_label': key,
-        'answer': value,
-        'form_id': widget.formId.toString(), // Ensure these IDs are converted to String if necessary
-        'created_by': 'some-uuid', // Replace with actual user UUID
-        'created_at': DateTime.now().toUtc().toString(),
+      _textFieldValues.forEach((key, value) {
+        payload.add({
+          'field_label': key,
+          'answer': value,
+          'form_id': widget.formId
+              .toString(), // Ensure these IDs are converted to String if necessary
+          'created_by': 'username', // Replace with actual user UUID
+          'created_at': DateTime.now().toUtc().toString(),
+        });
       });
-    });
 
-    final String endpoint =
-        'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
+      // Handling signature fields
+      for (int i = 0; i < _signatureControllers.length; i++) {
+        SignatureController controller = _signatureControllers[i];
+        final originalSignatureBytes = await _captureSignature(controller);
+        if (originalSignatureBytes != null) {
+          final originalSize = _getByteSize(originalSignatureBytes);
+          print('Original Signature Size: $originalSize bytes');
 
-    try {
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${TokenManager.accessToken}',
-        },
-        body: json.encode(payload),
-      );
+          final compressedSignatureBytes =
+              await _compressSignature(originalSignatureBytes);
+          final compressedSize = _getByteSize(compressedSignatureBytes);
+          print('Compressed Signature Size: $compressedSize bytes');
 
-      print('Payload: ${json.encode(payload)}');
+          payload.add({
+            'field_label': 'signature_$i', // Adjust as needed
+            'answer': base64Encode(
+                compressedSignatureBytes!), // Send as base64 string
+            'original_size': originalSize,
+            'compressed_size': compressedSize,
+            'form_id': widget.formId.toString(),
+            'created_by': 'username', // Replace with actual user UUID
+            'created_at': DateTime.now().toUtc().toString(),
+          });
+        }
+      }
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Form submitted successfully!')),
+      final String endpoint =
+          'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
+
+      try {
+        final response = await http.post(
+          Uri.parse(endpoint),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${TokenManager.accessToken}',
+          },
+          body: json.encode(payload),
         );
-      } else {
-        print('Failed to submit form: ${response.statusCode}');
-        print('Response body: ${response.body}');
+
+        print('Payload: ${json.encode(payload)}');
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Form submitted successfully!')),
+          );
+        } else {
+          print('Failed to submit form: ${response.statusCode}');
+          print('Response body: ${response.body}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Failed to submit form: ${response.statusCode}\n${response.body}')),
+          );
+        }
+      } catch (e) {
+        print('Error submitting form: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Failed to submit form: ${response.statusCode}\n${response.body}')),
+          SnackBar(content: Text('Error submitting form: $e')),
         );
       }
-    } catch (e) {
-      print('Error submitting form: $e');
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error submitting form: $e')),
+        SnackBar(content: Text('Please fill in all required fields.')),
       );
     }
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Please fill in all required fields.')),
-    );
   }
-}
-
-
-
 
   bool _validateForm() {
     // Add validation logic for each form field type
@@ -542,87 +419,38 @@ final _formKey = GlobalKey<FormState>();
   }
 
   @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       title: Text('Dynamic Form'),
-  //     ),
-  //     body: FutureBuilder<FormData>(
-  //       future: _formResponse,
-  //       builder: (context, snapshot) {
-  //         if (snapshot.connectionState == ConnectionState.waiting) {
-  //           return Center(child: CircularProgressIndicator());
-  //         } else if (snapshot.hasError) {
-  //           return Center(child: Text('Error: ${snapshot.error}'));
-  //         } else if (snapshot.hasData) {
-  //           return buildForm(snapshot.data!.formDetails);
-  //         } else {
-  //           return Center(child: Text('No data'));
-  //         }
-  //       },
-  //     ),
-  //   );
-  // }
-  // final _formKey = GlobalKey<FormState>();
-
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text('Dynamic Form'),
-    ),
-    body: FutureBuilder<FormData>(
-      future: _formResponse,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (snapshot.hasData) {
-          // Wrap the dynamically generated form fields with a Form widget
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey, 
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Dynamic Form'),
+      ),
+      body: FutureBuilder<FormData>(
+        future: _formResponse,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (snapshot.hasData) {
+            // Wrap the dynamically generated form fields with a Form widget
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
                 child: buildForm(snapshot.data!.formDetails),
-            ),
-          );
-        } else {
-          return Center(child: Text('No data'));
-        }
-      },
-    ),
-    // floatingActionButton: FloatingActionButton(
-    //   onPressed: _submitForm,
-    //   child: Icon(Icons.save),
-    // ),
-  );
-}
-
-  // Future<FormData> fetchFormData(String formId) async {
-  //   final token = TokenManager.accessToken;
-  //   if (token == null) {
-  //     throw Exception('Not authenticated');
-  //   }
-
-  //   final response = await http.get(
-  //     Uri.parse('http://192.168.250.209:7300/api/v1/messages/form/$formId'),
-  //     headers: {'Authorization': 'Bearer $token'},
-  //   );
-
-  //   if (response.statusCode == 200) {
-  //     try {
-  //       return FormData.fromJson(json.decode(response.body)['data']);
-  //     } catch (e) {
-  //       print('Error parsing response: $e'); // Log the parsing error
-  //       throw Exception('Failed to parse form data');
-  //     }
-  //   } else {
-  //     // Logging response details for debugging
-  //     print('Failed to load form data: ${response.statusCode}');
-  //     print('Response body: ${response.body}');
-  //     throw Exception('Failed to load form data: ${response.statusCode}');
-  //   }
-  // }
+              ),
+            );
+          } else {
+            return Center(child: Text('No data'));
+          }
+        },
+      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: _submitForm,
+      //   child: Icon(Icons.save),
+      // ),
+    );
+  }
 
   Future<FormData> fetchFormData(String formId) async {
     final token = TokenManager.accessToken;
@@ -677,27 +505,12 @@ Widget build(BuildContext context) {
           'longitude': _longitudeController.text,
           'latitude': _latitudeController.text,
           'images': imagePaths,
+          'textFieldValues': _textFieldValues, // Save text field values
+
           // You need to handle saving signatures as bytes or another suitable format
           // Add other fields like text inputs, signatures, images, etc.
         }));
   }
-
-// Load form data from SharedPreferences
-  // Future<void> _loadFormData(String formId) async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   String? formData = prefs.getString('formData_$formId');
-  //   if (formData != null) {
-  //     final data = json.decode(formData);
-  //     setState(() {
-  //       _radioGroupValues =
-  //           Map<String, dynamic>.from(data['radioGroupValues'] ?? {});
-  //       _checkboxGroupValues = Map<String, Map<String, bool>>.from(
-  //           (data['checkboxGroupValues'] ?? {}).map(
-  //               (key, value) => MapEntry(key, Map<String, bool>.from(value))));
-  //       // Load other fields like text inputs, signatures, images, etc.
-  //     });
-  //   }
-  // }
 
   Future<void> _loadFormData(String formId) async {
     final prefs = await SharedPreferences.getInstance();
@@ -715,6 +528,9 @@ Widget build(BuildContext context) {
             _checkboxGroupValues = Map<String, Map<String, bool>>.from(
                 (data['checkboxGroupValues'] ?? {}).map((key, value) =>
                     MapEntry(key, Map<String, bool>.from(value))));
+            _textFieldValues =
+                Map<String, String>.from(data['textFieldValues'] ?? {});
+
             // Load other fields like text inputs, signatures, images, etc.
           });
         } else {
@@ -734,4 +550,3 @@ Widget build(BuildContext context) {
     prefs.remove('formData_$formId');
   }
 }
-

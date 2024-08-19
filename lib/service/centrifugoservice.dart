@@ -1,92 +1,128 @@
+import 'dart:async';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/status.dart' as status;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:centrifuge/centrifuge.dart' as centrifuge;
 
-void main() => runApp(MyApp());
+class WebSocketManager {
+  WebSocketChannel? channel;
+  Timer? _reconnectTimer;
+  String? centrifugoToken;
 
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: CentrifugoDemo(),
-    );
-  }
-}
+  Future<void> connectToCentrifugo(String token) async {
+    final url =
+        Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
+    final headers = {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
 
-class CentrifugoDemo extends StatefulWidget {
-  @override
-  _CentrifugoDemoState createState() => _CentrifugoDemoState();
-}
+    print('Fetching Centrifugo credentials from: $url with headers: $headers');
 
-class _CentrifugoDemoState extends State<CentrifugoDemo> {
-  centrifuge.Client? _client;
+    try {
+      final response = await http.get(url, headers: headers);
 
-  final String CENTRIFUGO_WEBSOCKET = 'wss://smpp.stlghana.com/connection/websocket'; // Replace with your Centrifugo WebSocket URL
-  final String CENTRIFUGO_ACCESS_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJDZW50cmlmdWdvV2ViIiwiYXVkIjoiQ2VudHJpZnVnbyIsImlhdCI6MTcyMTgzODA2MCwiZXhwIjoxNzI0NTE2NDYwLCJzdWIiOiI1YzRlZWEyNi0zMTRlLTQ2MDItOTZlNi1hMTA3MGNkZDExMzYifQ.BKWEcrLeYBqYzTvo4IbHYLsHTRaXnLqSw5JFvuv1cg4'; // Replace with your JWT token
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-  @override
-  void initState() {
-    super.initState();
-    _connectToCentrifugo();
-  }
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        centrifugoToken = responseData['token'];
 
-  void _connectToCentrifugo() async {
-    _client = centrifuge.createClient(
-      CENTRIFUGO_WEBSOCKET,
-      centrifuge.ClientConfig(
-        token: CENTRIFUGO_ACCESS_TOKEN,
-      ),
-    );
+        print('Connecting to Centrifugo with token: $centrifugoToken');
 
-    _client?.connected.listen((event) {
-      print('Connected to Centrifugo');
-    });
-
-    _client?.disconnected.listen((event) {
-      print('Disconnected from Centrifugo');
-    });
-
-    await _client?.connect();
-
-    _subscribeToChannels();
-  }
-
-  void _subscribeToChannels() {
-    final channels = ['downSitesMonitor', 'notification', 'reminderChannel'];
-
-    for (var channel in channels) {
-      final sub = _client?.getSubscription(channel);
-
-      sub?.subscribed.listen((event) {
-        print('Subscribed to $channel');
-      });
-
-      sub?.subscribing.listen((event) {
-        print('Failed to subscribe to $channel: ${event}');
-      });
-
-      sub?.publication.listen((event) {
-        print('Data from $channel: ${event.data}');
-      });
-
-      sub?.subscribe();
+        _connectWebSocket();
+      } else {
+        print('Failed to fetch Centrifugo credentials');
+      }
+    } catch (e) {
+      print('Error fetching Centrifugo credentials: $e');
+      _attemptReconnect(token);
     }
   }
 
-  @override
-  void dispose() {
-    _client?.disconnect();
-    super.dispose();
+  void _connectWebSocket() {
+    final websocketUrl = 'wss://smpp.stlghana.com/connection/websocket';
+    channel = WebSocketChannel.connect(Uri.parse(websocketUrl));
+
+    // Listen for messages from the WebSocket
+    channel?.stream.listen(
+      (message) {
+        print('WebSocket message received: $message');
+        if (message is String) {
+          _handleMessage(message);
+        } else if (message is List<int>) {
+          final decodedMessage = utf8.decode(message);
+          _handleMessage(decodedMessage);
+        }
+      },
+      onError: (error) {
+        print('WebSocket error: $error');
+        _attemptReconnect(centrifugoToken!);
+      },
+      onDone: () {
+        print('WebSocket connection closed');
+        _attemptReconnect(centrifugoToken!);
+      },
+    );
+
+    // Send authentication message with token and id
+    final authMessage = jsonEncode({
+      "params": {
+        "token": centrifugoToken,
+      },
+      "id": 1,
+    });
+    channel?.sink.add(authMessage);
+    print('Sent authentication message: $authMessage');
+
+    // Subscribe to downSitesMonitor channel
+    final subscribeMessage = jsonEncode({
+      "method": 1,
+      "params": {"channel": "save"},
+      "id": 2,
+    });
+    channel?.sink.add(subscribeMessage);
+    print('Sent subscription message: $subscribeMessage');
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Centrifugo Demo'),
-      ),
-      body: Center(
-        child: Text('Connected to Centrifugo'),
-      ),
-    );
+  void _attemptReconnect(String token) {
+    _reconnectTimer?.cancel();
+
+    _reconnectTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+      print('Attempting to reconnect...');
+      try {
+        connectToCentrifugo(token);
+        if (channel != null) {
+          timer.cancel(); // Stop the reconnection attempts
+          _resubscribe(); // Re-subscribe after reconnecting
+        }
+      } catch (e) {
+        print('Reconnection failed: $e');
+      }
+    });
+  }
+
+  void _resubscribe() {
+    if (channel != null && centrifugoToken != null) {
+      // Resubscribe to channels or send any initial messages
+      final subscribeMessage = jsonEncode({
+        "method": 1,
+        "params": {"channel": "save"},
+        "id": 2,
+      });
+      channel?.sink.add(subscribeMessage);
+      print('Resent subscription message: $subscribeMessage');
+    }
+  }
+
+  void dispose() {
+    channel?.sink.close(status.goingAway);
+    _reconnectTimer?.cancel();
+  }
+
+  void _handleMessage(String message) {
+    // Handle incoming messages
   }
 }

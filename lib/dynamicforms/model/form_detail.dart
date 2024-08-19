@@ -189,6 +189,8 @@ class FormDetails {
   final String defaultValue;
   final String placeholder;
   final String fieldType;
+    final String? formDetailId; // Add this property
+
   final List<String> constraints;
   final String key;
   final String? createdBy;
@@ -205,6 +207,7 @@ class FormDetails {
     required this.defaultValue,
     required this.placeholder,
     required this.fieldType,
+    required this.formDetailId,
     required this.constraints,
     required this.key,
     this.createdBy,
@@ -223,6 +226,8 @@ class FormDetails {
       defaultValue: json['defaultValue'] ?? '',
       placeholder: json['placeholder'] ?? '',
       fieldType: json['fieldType'] ?? '',
+            formDetailId: json['form_detail_id'], // Deserialize this property
+
       constraints: List<String>.from(json['constraints'] ?? []),
       key: json['key'] ?? '',
       createdBy: json['createdBy'],
