@@ -9,6 +9,8 @@ import 'package:oauth2_test/constants.dart';
 import 'package:oauth2_test/tokenmanager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+WebSocketChannel? channel;
+
 class ChatterScreen extends StatefulWidget {
   final String token;
   final String username;
@@ -49,177 +51,71 @@ class _ChatterScreenState extends State<ChatterScreen> {
         AndroidInitializationSettings('@mipmap/ic_launcher');
   }
 
-  // Future<void> connectToCentrifugo() async {
-  //   final url =
-  //       Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
-  //   final headers = {
-  //     'Authorization': 'Bearer ${widget.token}',
-  //     'Content-Type': 'application/json',
-  //   };
-
-  //   print('Fetching Centrifugo credentials from: $url with headers: $headers');
-
-  //   try {
-  //     final response = await http.get(url, headers: headers);
-
-  //     print('Response status: ${response.statusCode}');
-  //     print('Response body: ${response.body}');
-
-  //     if (response.statusCode == 200) {
-  //       final Map<String, dynamic> responseData = jsonDecode(response.body);
-  //       final centrifugoToken = responseData['token'];
-
-  //       print('Connecting to Centrifugo with token: $centrifugoToken');
-
-  //       // Create WebSocket channel
-  //       final websocketUrl = 'wss://smpp.stlghana.com/connection/websocket';
-  //       channel = WebSocketChannel.connect(Uri.parse(websocketUrl));
-
-  //       // Listen for messages from the WebSocket
-  //       channel.stream.listen((message) {
-  //         if (message is String) {
-  //           print('Received String message: $message');
-  //           _handleMessage(message);
-  //         } else if (message is List<int>) {
-  //           final decodedMessage = utf8.decode(message);
-  //           print('Received List<int> message: $decodedMessage');
-  //           _handleMessage(decodedMessage);
-  //         }
-  //       }, onError: (error) {
-  //         print('WebSocket error: $error');
-  //       }, onDone: () {
-  //         print('WebSocket connection closed');
-  //       });
-
-  //       // Send authentication message with token and id
-  //       final authMessage = jsonEncode({
-  //         "params": {
-  //           "token": centrifugoToken,
-  //         },
-  //         "id": 1
-  //       });
-  //       channel.sink.add(authMessage);
-  //       print('Sent authentication message: $authMessage');
-
-  //       // Subscribe to downSitesMonitor channel
-  //       final subscribeMessage = jsonEncode({
-  //         "method": 1,
-  //         "params": {"channel": "downSitesMoniitor"},
-  //         "id": 2
-  //       });
-  //       channel.sink.add(subscribeMessage);
-  //       print('Sent subscription message: $subscribeMessage');
-  //       print('WebSocket connection status: ${channel != null}');
-
-  //       // Publish to Channel
-  //     } else {
-  //       print('Failed to fetch Centrifugo credentials');
-  //     }
-  //   } catch (e) {
-  //     print('Error fetching Centrifugo credentials: $e');
-  //   }
-  // }
-
   void connectToCentrifugo() async {
-    final url =
-        Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
-    final headers = {
-      'Authorization': 'Bearer ${widget.token}',
-      'Content-Type': 'application/json',
-    };
+  final url = Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
+  final headers = {
+    'Authorization': 'Bearer ${widget.token}',
+    'Content-Type': 'application/json',
+  };
 
-    print('Fetching Centrifugo credentials from: $url with headers: $headers');
+  print('Fetching Centrifugo credentials from: $url with headers: $headers');
 
-    try {
-      final response = await http.get(url, headers: headers);
+  try {
+    final response = await http.get(url, headers: headers);
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final centrifugoToken = responseData['token'];
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+      final centrifugoToken = responseData['token'];
 
-        print('Connecting to Centrifugo with token: $centrifugoToken');
+      print('Connecting to Centrifugo with token: $centrifugoToken');
 
-        // Create WebSocket channel
-        final websocketUrl = 'wss://smpp.stlghana.com/connection/websocket';
-        channel = WebSocketChannel.connect(Uri.parse(websocketUrl));
+      // Create WebSocket channel
+      final websocketUrl = 'wss://smpp.stlghana.com/connection/websocket';
+      channel = WebSocketChannel.connect(Uri.parse(websocketUrl));
 
-        // Listen for messages from the WebSocket
-        channel.stream.listen((message) {
-          print('WebSocket message received: $message');
-          if (message is String) {
-            _handleMessage(message);
-          } else if (message is List<int>) {
-            final decodedMessage = utf8.decode(message);
-            _handleMessage(decodedMessage);
-          }
-        }, onError: (error) {
-          print('WebSocket error: $error');
-        }, onDone: () {
-          print('WebSocket connection closed');
-        });
+      // Verify connection by listening to the WebSocket stream
+      channel!.stream.listen((message) {
+        print('WebSocket message received: $message');
+        if (message is String) {
+          _handleMessage(message);
+        } else if (message is List<int>) {
+          final decodedMessage = utf8.decode(message);
+          _handleMessage(decodedMessage);
+        }
+      }, onError: (error) {
+        print('WebSocket error: $error');
+      }, onDone: () {
+        print('WebSocket connection closed');
+      });
 
-        // Send authentication message with token and id
-        final authMessage = jsonEncode({
-          "params": {
-            "token": centrifugoToken,
-          },
-          "id": 1
-        });
-        channel.sink.add(authMessage);
-        print('Sent authentication message: $authMessage');
+      // Send authentication message with token
+      final authMessage = jsonEncode({
+        "params": {
+          "token": centrifugoToken,
+        },
+        "id": 1
+      });
+      channel!.sink.add(authMessage);
+      print('Sent authentication message: $authMessage');
 
-        // Verify connection before subscribing
-        print('WebSocket connection status: ${channel != null}');
-
-        // Subscribe to downSitesMonitor channel
-        final subscribeMessage = jsonEncode({
-          "method": 1,
-          "params": {"channel": "save"},
-          "id": 2
-        });
-        channel.sink.add(subscribeMessage);
-        print('Sent subscription message: $subscribeMessage');
-      } else {
-        print('Failed to fetch Centrifugo credentials');
-      }
-    } catch (e) {
-      print('Error fetching Centrifugo credentials: $e');
+      // Subscribe to downSitesMonitor channel
+      final subscribeMessage = jsonEncode({
+        "method": 1,
+        "params": {"channel": "save"},
+        "id": 2
+      });
+      channel!.sink.add(subscribeMessage);
+      print('Sent subscription message: $subscribeMessage');
+    } else {
+      print('Failed to fetch Centrifugo credentials');
     }
+  } catch (e) {
+    print('Error fetching Centrifugo credentials: $e');
   }
-
-  // void _handleMessage(dynamic message) {
-  //   try {
-  //     final messageData = jsonDecode(message) as Map<String, dynamic>?;
-
-  //     if (messageData != null && messageData.containsKey('result')) {
-  //       final result = messageData['result'] as Map<String, dynamic>?;
-  //       if (result != null && result.containsKey('data')) {
-  //         final dataWrapper = result['data'] as Map<String, dynamic>?;
-  //         if (dataWrapper != null && dataWrapper.containsKey('data')) {
-  //           final data = dataWrapper['data'] as Map<String, dynamic>?;
-
-  //           final messageContent =
-  //               data?['message'] as String? ?? 'Null message';
-  //           // final status = data?['status'] as String? ?? 'Unknown status';
-
-  //           // onMessageReceived('Site: $messageContent, Status: $status', 'System');
-  //           onMessageReceived('$messageContent', 'User');
-  //         } else {
-  //           print('No "data" key in dataWrapper');
-  //         }
-  //       } else {
-  //         print('No "data" key in result');
-  //       }
-  //     } else {
-  //       print('No "result" key in messageData');
-  //     }
-  //   } catch (e) {
-  //     print('Error parsing message: $e');
-  //   }
-  // }
+}
 
   void _handleMessage(dynamic message) {
   print('Raw message received: $message'); // Log the raw message

@@ -176,6 +176,10 @@ class FormDetail extends HiveObject {
       'updatedAt': updatedAt?.toIso8601String(),
     };
   }
+    @override
+  String toString() {
+    return 'FormDetail{id: $id, index: $index, fieldLabel: $fieldLabel, key: $key, required: $isRequired}';
+  }
 }
 
 @HiveType(typeId: 2)

@@ -1,11 +1,14 @@
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:oauth2_test/dynamicforms/model/form_detail.dart';
+import 'package:oauth2_test/dynamicforms/model/form_model.dart';
 import 'dart:convert';
 import 'package:oauth2_test/tokenmanager.dart';
 import 'package:signature/signature.dart';
@@ -37,6 +40,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     super.initState();
     _formResponse = fetchFormData(widget.formId);
     _loadFormData(widget.formId);
+    _startConnectivityListener();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -304,12 +308,28 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     );
   }
 
+  Future<bool> isConnectedToNetwork() async {
+  try {
+    final result = await InternetAddress.lookup('google.com');
+    return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+  } on SocketException catch (_) {
+    return false;
+  }
+}
+
+Future<bool> _hasInternetConnection() async {
+  final connectivityResult = await Connectivity().checkConnectivity();
+  return connectivityResult != ConnectivityResult.none;
+}
+
+
+
 // Method to get the size of a byte array
   int _getByteSize(Uint8List? bytes) {
     return bytes?.lengthInBytes ?? 0;
   }
 
-    // Method to capture the signature as a byte array
+  // Method to capture the signature as a byte array
   Future<Uint8List?> _captureSignature(SignatureController controller) async {
     if (controller.isNotEmpty) {
       final Uint8List? signatureBytes = await controller.toPngBytes();
@@ -374,6 +394,46 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       final String endpoint =
           'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
 
+  //     try {
+  //       final response = await http.post(
+  //         Uri.parse(endpoint),
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           'Authorization': 'Bearer ${TokenManager.accessToken}',
+  //         },
+  //         body: json.encode(payload),
+  //       );
+
+  //       print('Payload: ${json.encode(payload)}');
+
+  //       if (response.statusCode == 200) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(content: Text('Form submitted successfully!')),
+  //         );
+  //       } else {
+  //         print('Failed to submit form: ${response.statusCode}');
+  //         print('Response body: ${response.body}');
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //               content: Text(
+  //                   'Failed to submit form: ${response.statusCode}\n${response.body}')),
+  //         );
+  //       }
+  //     } catch (e) {
+  //       print('Error submitting form: $e');
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Error submitting form: $e')),
+  //       );
+  //     }
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Please fill in all required fields.')),
+  //     );
+  //   }
+  // }
+
+  if (await _hasInternetConnection()) {
+      // If online, submit data to the remote server
       try {
         final response = await http.post(
           Uri.parse(endpoint),
@@ -406,11 +466,68 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill in all required fields.')),
-      );
+      // If offline, save data to Hive
+      try {
+        await _saveFormLocally(payload);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No internet connection. Form saved locally.')),
+        );
+      } catch (e) {
+        print('Error saving form locally: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving form locally: $e')),
+        );
+      }
     }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Please fill in all required fields.')),
+    );
   }
+}
+
+Future<void> _saveFormLocally(List<Map<String, dynamic>> payload) async {
+  var box = await Hive.openBox<Map<String, dynamic>>('form_submissions');
+  await box.addAll(payload); // Save all form data as separate entries
+}
+
+
+void _startConnectivityListener() {
+  Connectivity().onConnectivityChanged.listen((ConnectivityResult result) async {
+    if (result != ConnectivityResult.none) {
+      // Connectivity restored, sync saved forms
+      var box = await Hive.openBox<List<Map<String, dynamic>>>('form_submissions');
+      var savedForms = box.values.toList();
+
+      for (var formPayload in savedForms) {
+        final String endpoint =
+            'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
+
+        try {
+          final response = await http.post(
+            Uri.parse(endpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${TokenManager.accessToken}',
+            },
+            body: json.encode(formPayload),
+          );
+
+          if (response.statusCode == 200) {
+            print('Form submitted successfully after reconnecting!');
+            await box.delete(formPayload); // Remove successfully sent form from Hive
+          } else {
+            print('Failed to submit form after reconnecting: ${response.statusCode}');
+          }
+        } catch (e) {
+          print('Error submitting form after reconnecting: $e');
+        }
+      }
+    }
+  });
+}
+
 
   bool _validateForm() {
     // Add validation logic for each form field type
@@ -453,42 +570,106 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   }
 
   Future<FormData> fetchFormData(String formId) async {
-    final token = TokenManager.accessToken;
-    if (token == null) {
-      throw Exception('Not authenticated');
-    }
-
-    final response = await http.get(
-      Uri.parse('http://192.168.250.209:7300/api/v1/messages/form/$formId'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        final jsonBody = json.decode(response.body);
-
-        // Check if 'data' is a list and if it's empty
-        if (jsonBody['data'] is List && (jsonBody['data'] as List).isEmpty) {
-          throw Exception('No form data available');
-        }
-
-        // Assuming 'data' should be a map or at least a non-empty list
-        if (jsonBody['data'] is Map<String, dynamic>) {
-          return FormData.fromJson(jsonBody['data']);
-        } else {
-          throw Exception('Unexpected JSON structure: "data" is not a Map');
-        }
-      } catch (e) {
-        print('Error parsing response: $e');
-        throw Exception('Failed to parse form data');
-      }
+    bool isConnected = await isConnectedToNetwork();
+    if (!isConnected) {
+      return _fetchFormDataFromHive(formId);
     } else {
-      // Logging response details for debugging
-      print('Failed to load form data: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      throw Exception('Failed to load form data: ${response.statusCode}');
+      return _fetchFormDataFromRemote(formId);
     }
   }
+
+  // Future<FormData> _fetchFormDataFromRemote(String formId) async {
+  //   final token = TokenManager.accessToken;
+  //   if (token == null) {
+  //     throw Exception('Not authenticated');
+  //   }
+
+  //   final response = await http.get(
+  //     Uri.parse('http://192.168.250.209:7300/api/v1/messages/form/$formId'),
+  //     headers: {'Authorization': 'Bearer $token'},
+  //   );
+
+  //   if (response.statusCode == 200) {
+  //     final data = json.decode(response.body)['data'];
+  //     final formModel = FormModel.fromJson(data);
+
+  //     var box = await Hive.openBox<FormModel>('forms');
+  //     await box.put(formModel.id, formModel);
+  //     try {
+  //       final jsonBody = json.decode(response.body);
+
+  //       // Check if 'data' is a list and if it's empty
+  //       if (jsonBody['data'] is List && (jsonBody['data'] as List).isEmpty) {
+  //         throw Exception('No form data available');
+  //       }
+
+  //       // Assuming 'data' should be a map or at least a non-empty list
+  //       if (jsonBody['data'] is Map<String, dynamic>) {
+  //         return FormData.fromJson(jsonBody['data']);
+  //       } else {
+  //         throw Exception('Unexpected JSON structure: "data" is not a Map');
+  //       }
+  //     } catch (e) {
+  //       print('Error parsing response: $e');
+  //       throw Exception('Failed to parse form data');
+  //     }
+  //   } else {
+  //     // Logging response details for debugging
+  //     print('Failed to load form data: ${response.statusCode}');
+  //     print('Response body: ${response.body}');
+  //     throw Exception('Failed to load form data: ${response.statusCode}');
+  //   }
+  // }
+
+  Future<FormData> _fetchFormDataFromRemote(String formId) async {
+  final token = TokenManager.accessToken;
+  if (token == null) {
+    throw Exception('Not authenticated');
+  }
+
+  final response = await http.get(
+    Uri.parse('http://192.168.250.209:7300/api/v1/messages/form/$formId'),
+    headers: {'Authorization': 'Bearer $token'},
+  );
+
+  if (response.statusCode == 200) {
+    try {
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse is Map<String, dynamic> && jsonResponse['data'] is Map<String, dynamic>) {
+        final formModel = FormModel.fromJson(jsonResponse['data']);
+
+        // Open the Hive box and save the formModel
+        var box = await Hive.openBox<FormModel>('forms');
+        await box.put(formModel.id, formModel);
+        print('FormModel saved: ${formModel.id}');
+
+        return FormData.fromJson(jsonResponse['data']);
+      } else {
+        throw Exception('Invalid response format');
+      }
+    } catch (e) {
+      print('Error parsing response: $e');
+      throw Exception('Failed to parse form data');
+    }
+  } else {
+    print('Failed to load form data: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    throw Exception('Failed to load form data: ${response.statusCode}');
+  }
+}
+
+
+Future<FormData> _fetchFormDataFromHive(String formId) async {
+  var box = await Hive.openBox<FormModel>('forms');
+  var formModel = box.get(formId);
+
+  if (formModel != null) {
+    return FormData.fromJson(formModel.toJson());
+  } else {
+    throw Exception('Form not found in local storage');
+  }
+}
+
 
   // Save form data to SharedPreferences
   Future<void> _saveFormData(String formId) async {
@@ -544,7 +725,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     }
   }
 
-  // Clear form data from SharedPreferences
   Future<void> _clearFormData(String formId) async {
     final prefs = await SharedPreferences.getInstance();
     prefs.remove('formData_$formId');

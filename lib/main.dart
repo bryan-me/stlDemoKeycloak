@@ -139,6 +139,7 @@ class _MyHomePageState extends State<MyHomePage> {
           'password': password,
         },
       );
+      
 
       print('Token response: ${tokenResponse.body}');
       final tokenData = json.decode(tokenResponse.body);
@@ -253,6 +254,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       ),
                       onPressed: () async {
+                        print('Login button pressed');
                         try {
                           await createClient();
                         } catch (e) {
