@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:oauth2_test/screens/form_list.dart';
 import 'package:oauth2_test/widgets/internet_status.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -36,86 +37,180 @@ class _ChatterScreenState extends State<ChatterScreen> {
   late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
   late WebSocketChannel channel;
 
+    // Variables to hold user details
+  late String username;
+  late String email;
+  late String sub;
+
   @override
   void initState() {
     super.initState();
     print('Session State in ChatterScreen: ${widget.sub}');
+     extractUserDetailsFromToken();
     getMessages();
     connectToCentrifugo();
     initNotifications();
   }
 
-  void initNotifications() {
+  void extractUserDetailsFromToken() {
+    try {
+      // Decode the JWT token
+      final jwt = JWT.decode(widget.token);
+
+      // Extract user details from the payload
+      username = jwt.payload['preferred_username'];
+      email = jwt.payload['email'];
+      sub = jwt.payload['sub'];
+
+      print('Extracted username: $username');
+      print('Extracted email: $email');
+      print('Extracted sub: $sub');
+    } catch (e) {
+      print('Error decoding JWT token: $e');
+    }
+  }
+
+  bool isUserSender(String loggedInUsername, String senderUsername) {
+  return loggedInUsername == senderUsername;
+}
+
+
+  void initNotifications() async {
     flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const DarwinInitializationSettings initializationSettingsDarwin =
+        DarwinInitializationSettings();
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsDarwin,
+    );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   void connectToCentrifugo() async {
-  final url = Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
-  final headers = {
-    'Authorization': 'Bearer ${widget.token}',
-    'Content-Type': 'application/json',
-  };
+    final url =
+        Uri.parse('http://192.168.250.209:7300/api/v1/messages/credentials');
+    final headers = {
+      'Authorization': 'Bearer ${widget.token}',
+      'Content-Type': 'application/json',
+    };
 
-  print('Fetching Centrifugo credentials from: $url with headers: $headers');
+    print('Fetching Centrifugo credentials from: $url with headers: $headers');
 
-  try {
-    final response = await http.get(url, headers: headers);
+    try {
+      final response = await http.get(url, headers: headers);
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = jsonDecode(response.body);
-      final centrifugoToken = responseData['token'];
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        final centrifugoToken = responseData['token'];
 
-      print('Connecting to Centrifugo with token: $centrifugoToken');
+        print('Connecting to Centrifugo with token: $centrifugoToken');
 
-      // Create WebSocket channel
-      final websocketUrl = 'wss://smpp.stlghana.com/connection/websocket';
-      channel = WebSocketChannel.connect(Uri.parse(websocketUrl));
+        // Create WebSocket channel
+        final websocketUrl = 'wss://smpp.stlghana.com/connection/websocket';
+        channel = WebSocketChannel.connect(Uri.parse(websocketUrl));
 
-      // Verify connection by listening to the WebSocket stream
-      channel!.stream.listen((message) {
-        print('WebSocket message received: $message');
-        if (message is String) {
-          _handleMessage(message);
-        } else if (message is List<int>) {
-          final decodedMessage = utf8.decode(message);
-          _handleMessage(decodedMessage);
-        }
-      }, onError: (error) {
-        print('WebSocket error: $error');
-      }, onDone: () {
-        print('WebSocket connection closed');
-      });
+        // Verify connection by listening to the WebSocket stream
+        channel!.stream.listen((message) {
+          print('WebSocket message received: $message');
+          if (message is String) {
+            _handleMessage(message);
+          } else if (message is List<int>) {
+            final decodedMessage = utf8.decode(message);
+            _handleMessage(decodedMessage);
+          }
+        }, onError: (error) {
+          print('WebSocket error: $error');
+        }, onDone: () {
+          print('WebSocket connection closed');
+        });
 
-      // Send authentication message with token
-      final authMessage = jsonEncode({
-        "params": {
-          "token": centrifugoToken,
-        },
-        "id": 1
-      });
-      channel!.sink.add(authMessage);
-      print('Sent authentication message: $authMessage');
+        // Send authentication message with token
+        final authMessage = jsonEncode({
+          "params": {
+            "token": centrifugoToken,
+          },
+          "id": 1
+        });
+        channel!.sink.add(authMessage);
+        print('Sent authentication message: $authMessage');
 
-      // Subscribe to downSitesMonitor channel
-      final subscribeMessage = jsonEncode({
-        "method": 1,
-        "params": {"channel": "save"},
-        "id": 2
-      });
-      channel!.sink.add(subscribeMessage);
-      print('Sent subscription message: $subscribeMessage');
-    } else {
-      print('Failed to fetch Centrifugo credentials');
+        // Subscribe to downSitesMonitor channel
+        final subscribeMessage = jsonEncode({
+          "method": 1,
+          "params": {"channel": "save"},
+          "id": 2
+        });
+        channel!.sink.add(subscribeMessage);
+        print('Sent subscription message: $subscribeMessage');
+      } else {
+        print('Failed to fetch Centrifugo credentials');
+      }
+    } catch (e) {
+      print('Error fetching Centrifugo credentials: $e');
     }
-  } catch (e) {
-    print('Error fetching Centrifugo credentials: $e');
   }
-}
+
+  // void _handleMessage(dynamic message) {
+  //   print('Raw message received: $message'); // Log the raw message
+
+  //   try {
+  //     final decodedMessage = message is String
+  //         ? jsonDecode(message)
+  //         : jsonDecode(utf8.decode(message));
+
+  //     if (decodedMessage is Map<String, dynamic>) {
+  //       if (decodedMessage.containsKey('result')) {
+  //         final result = decodedMessage['result'] as Map<String, dynamic>?;
+
+  //         if (result != null && result.containsKey('data')) {
+  //           final dataWrapper = result['data'] as Map<String, dynamic>?;
+
+  //           if (dataWrapper != null && dataWrapper.containsKey('data')) {
+  //             final data = dataWrapper['data'] as Map<String, dynamic>?;
+
+  //             final messageContent =
+  //                 data?['message'] as String? ?? 'Null message';
+  //             onMessageReceived(messageContent, 'User');
+  //           } else {
+  //             print('No "data" key in dataWrapper');
+  //           }
+  //         } else {
+  //           print('No "data" key in result');
+  //         }
+  //       } else {
+  //         print('No "result" key in decodedMessage');
+  //       }
+  //     } else {
+  //       print('Received message is not a valid JSON object: $decodedMessage');
+  //     }
+  //   } catch (e) {
+  //     print('Error parsing message: $e');
+  //   }
+  // }
+  
+
+  // void onMessageReceived(String messageContent, String sender) {
+  //   final messageBubble = MessageBubble(
+  //     msgText: messageContent,
+  //     msgSender: sender,
+  //     user: false,
+  //   );
+
+  //   setState(() {
+  //     messages.add(messageBubble);
+  //   });
+  //   _scrollToBottom();
+
+  //   _showNotification(messageContent);
+  // }
 
   void _handleMessage(dynamic message) {
   print('Raw message received: $message'); // Log the raw message
@@ -134,7 +229,12 @@ class _ChatterScreenState extends State<ChatterScreen> {
             final data = dataWrapper['data'] as Map<String, dynamic>?;
 
             final messageContent = data?['message'] as String? ?? 'Null message';
-            onMessageReceived(messageContent, 'User');
+            final senderId = data?['senderId'] as String? ?? '';  // Get senderId
+            final senderName = data?['sender'] as String? ?? 'Unknown'; // Get sender name
+
+            final isUserMessage = senderId == widget.sub; // Check if the sender is the current user
+
+            onMessageReceived(messageContent, senderName, isUserMessage);
           } else {
             print('No "data" key in dataWrapper');
           }
@@ -152,21 +252,23 @@ class _ChatterScreenState extends State<ChatterScreen> {
   }
 }
 
+void onMessageReceived(String messageContent, String sender, bool isUserMessage) {
+  final messageBubble = MessageBubble(
+    msgText: messageContent,
+    msgSender: username,
+    user: isUserMessage,
+  );
 
-  void onMessageReceived(String messageContent, String sender) {
-    final messageBubble = MessageBubble(
-      msgText: messageContent,
-      msgSender: sender,
-      user: false,
-    );
+  setState(() {
+    messages.add(messageBubble);
+  });
+  _scrollToBottom();
 
-    setState(() {
-      messages.add(messageBubble);
-    });
-    _scrollToBottom();
-
+  if (!isUserMessage) {
     _showNotification(messageContent);
   }
+}
+
 
   Future<void> _showNotification(String message) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
@@ -215,7 +317,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
             return MessageBubble(
               msgText: message['message'] ?? 'No message',
               msgSender: message['senderId'] ?? 'Unknown',
-              user: message['senderId'] == widget.username,
+              user: message['senderId'] == username,
             );
           }).toList();
         });
@@ -246,11 +348,19 @@ class _ChatterScreenState extends State<ChatterScreen> {
       'Authorization': 'Bearer ${widget.token}',
       'apikey': '65bcc0d4-3d68-455c-b6c1-168c8f20eb27',
     };
+    // final body = jsonEncode({
+    //   'sender': widget.username,
+    //   'message': messageText,
+    //   'timestamp': DateTime.now().millisecondsSinceEpoch,
+    //   'senderEmail': widget.email,
+    // });
+
     final body = jsonEncode({
-      'sender': widget.username,
+      'senderId': widget.sub, // Use the unique identifier of the sender
+      'sender': username, // Include the username in the payload
       'message': messageText,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
-      'senderEmail': widget.email,
+      'senderEmail': email,
     });
 
     print('Sending message to: $url with headers: $headers and body: $body');
@@ -265,7 +375,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
         setState(() {
           messages.add(MessageBubble(
             msgText: messageText,
-            msgSender: widget.username,
+            msgSender: username,
             user: true,
           ));
           chatMsgTextController.clear();
@@ -442,6 +552,52 @@ class _ChatterScreenState extends State<ChatterScreen> {
   }
 }
 
+// class MessageBubble extends StatelessWidget {
+//   final String msgText;
+//   final String msgSender;
+//   final bool user;
+
+//   MessageBubble({
+//     required this.msgText,
+//     required this.msgSender,
+//     required this.user,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: const EdgeInsets.all(12.0),
+//       child: Column(
+//         crossAxisAlignment:
+//             user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+//         children: <Widget>[
+//           Material(
+//             borderRadius: BorderRadius.only(
+//               bottomLeft: Radius.circular(50),
+//               topLeft: user ? Radius.circular(50) : Radius.circular(0),
+//               bottomRight: Radius.circular(50),
+//               topRight: user ? Radius.circular(0) : Radius.circular(50),
+//             ),
+//             color: user ? Colors.grey : Colors.blue.shade800,
+//             elevation: 5,
+//             child: Padding(
+//               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+//               child: Text(
+//                 msgText,
+//                 style: TextStyle(
+//                   color: user ? Colors.black : Colors.white,
+//                   fontFamily: 'Poppins',
+//                   fontSize: 15,
+//                 ),
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
 class MessageBubble extends StatelessWidget {
   final String msgText;
   final String msgSender;
@@ -487,6 +643,7 @@ class MessageBubble extends StatelessWidget {
     );
   }
 }
+
 
 class ChatStream extends StatelessWidget {
   final List<MessageBubble> messages;

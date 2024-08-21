@@ -45,6 +45,7 @@ dependencies:
   hive_flutter: ^1.1.0
   connectivity_plus: ^4.0.2
   flutter_image_compress: ^2.3.0
+  dart_jsonwebtoken: ^2.14.0
   
   
 
