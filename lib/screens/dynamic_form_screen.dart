@@ -348,92 +348,211 @@ Future<bool> _hasInternetConnection() async {
     return compressedBytes;
   }
 
-  void _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
+//   void _submitForm() async {
+//     if (_formKey.currentState!.validate()) {
+//       _formKey.currentState!.save();
 
-      final List<Map<String, dynamic>> payload = [];
+//       final List<Map<String, dynamic>> payload = [];
 
-      _textFieldValues.forEach((key, value) {
+//       _textFieldValues.forEach((key, value) {
+//         payload.add({
+//           'field_label': key,
+//           'answer': value,
+//           'form_id': widget.formId
+//               .toString(), // Ensure these IDs are converted to String if necessary
+//           'created_by': 'username', // Replace with actual user UUID
+//           'created_at': DateTime.now().toUtc().toString(),
+//         });
+//       });
+
+//       // Handling signature fields
+//       for (int i = 0; i < _signatureControllers.length; i++) {
+//         SignatureController controller = _signatureControllers[i];
+//         final originalSignatureBytes = await _captureSignature(controller);
+//         if (originalSignatureBytes != null) {
+//           final originalSize = _getByteSize(originalSignatureBytes);
+//           print('Original Signature Size: $originalSize bytes');
+
+//           final compressedSignatureBytes =
+//               await _compressSignature(originalSignatureBytes);
+//           final compressedSize = _getByteSize(compressedSignatureBytes);
+//           print('Compressed Signature Size: $compressedSize bytes');
+
+//           payload.add({
+//             'field_label': 'signature_$i', // Adjust as needed
+//             'answer': base64Encode(
+//                 compressedSignatureBytes!), // Send as base64 string
+//             'original_size': originalSize,
+//             'compressed_size': compressedSize,
+//             'form_id': widget.formId.toString(),
+//             'created_by': 'username', // Replace with actual user UUID
+//             'created_at': DateTime.now().toUtc().toString(),
+//           });
+//         }
+//       }
+
+//       final String endpoint =
+//           'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
+
+//   //     try {
+//   //       final response = await http.post(
+//   //         Uri.parse(endpoint),
+//   //         headers: {
+//   //           'Content-Type': 'application/json',
+//   //           'Authorization': 'Bearer ${TokenManager.accessToken}',
+//   //         },
+//   //         body: json.encode(payload),
+//   //       );
+
+//   //       print('Payload: ${json.encode(payload)}');
+
+//   //       if (response.statusCode == 200) {
+//   //         ScaffoldMessenger.of(context).showSnackBar(
+//   //           SnackBar(content: Text('Form submitted successfully!')),
+//   //         );
+//   //       } else {
+//   //         print('Failed to submit form: ${response.statusCode}');
+//   //         print('Response body: ${response.body}');
+//   //         ScaffoldMessenger.of(context).showSnackBar(
+//   //           SnackBar(
+//   //               content: Text(
+//   //                   'Failed to submit form: ${response.statusCode}\n${response.body}')),
+//   //         );
+//   //       }
+//   //     } catch (e) {
+//   //       print('Error submitting form: $e');
+//   //       ScaffoldMessenger.of(context).showSnackBar(
+//   //         SnackBar(content: Text('Error submitting form: $e')),
+//   //       );
+//   //     }
+//   //   } else {
+//   //     ScaffoldMessenger.of(context).showSnackBar(
+//   //       SnackBar(content: Text('Please fill in all required fields.')),
+//   //     );
+//   //   }
+//   // }
+
+//   if (await _hasInternetConnection()) {
+//       // If online, submit data to the remote server
+//       try {
+//         final response = await http.post(
+//           Uri.parse(endpoint),
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': 'Bearer ${TokenManager.accessToken}',
+//           },
+//           body: json.encode(payload),
+//         );
+
+//         print('Payload: ${json.encode(payload)}');
+
+//         if (response.statusCode == 200) {
+//           ScaffoldMessenger.of(context).showSnackBar(
+//             SnackBar(content: Text('Form submitted successfully!')),
+//           );
+//         } else {
+//           print('Failed to submit form: ${response.statusCode}');
+//           print('Response body: ${response.body}');
+//           ScaffoldMessenger.of(context).showSnackBar(
+//             SnackBar(
+//                 content: Text(
+//                     'Failed to submit form: ${response.statusCode}\n${response.body}')),
+//           );
+//         }
+//       } catch (e) {
+//         print('Error submitting form: $e');
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(content: Text('Error submitting form: $e')),
+//         );
+//       }
+//     } else {
+//       // If offline, save data to Hive
+//       try {
+//         await _saveFormLocally(payload);
+
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(content: Text('No internet connection. Form saved locally.')),
+//         );
+//       } catch (e) {
+//         print('Error saving form locally: $e');
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(content: Text('Error saving form locally: $e')),
+//         );
+//       }
+//     }
+//   } else {
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text('Please fill in all required fields.')),
+//     );
+//   }
+// }
+
+void _submitForm() async {
+  if (_formKey.currentState!.validate()) {
+    _formKey.currentState!.save();
+
+    // Assuming you have a method to fetch form details from the endpoint
+    FormModel? formModel = await _fetchFormDetails(widget.formId);
+
+    if (formModel == null) {
+      // Handle error if form details could not be fetched
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch form details.')),
+      );
+      return;
+    }
+
+    final List<Map<String, dynamic>> payload = [];
+
+    _textFieldValues.forEach((key, value) {
+      // Find the corresponding form detail by field label
+      String? formDetailId = formModel.formDetails.firstWhere(
+        (detail) => detail.fieldLabel == key,
+        orElse: () => FormDetail(id: '', index: 1, fieldLabel: '', fieldOptions: [], isRequired: false, defaultValue: '', placeholder: '', fieldType: '', constraints: [], key: '', createdBy: '', updatedBy: '')
+      ).id;
+
+      if (formDetailId != null && formDetailId.isNotEmpty) {
         payload.add({
-          'field_label': key,
+          'fieldLabel': key,
           'answer': value,
-          'form_id': widget.formId
-              .toString(), // Ensure these IDs are converted to String if necessary
+          'formId': widget.formId.toString(),
+          'formDetailId': formDetailId, 
+          // 'placeholder': place
+          'createdBy': '', 
+          'createdAt': DateTime.now().toUtc().toString(),
+        });
+      }
+    });
+
+    // Include signature fields if applicable
+    for (int i = 0; i < _signatureControllers.length; i++) {
+      SignatureController controller = _signatureControllers[i];
+      final originalSignatureBytes = await _captureSignature(controller);
+      if (originalSignatureBytes != null) {
+        final originalSize = _getByteSize(originalSignatureBytes);
+        final compressedSignatureBytes = await _compressSignature(originalSignatureBytes);
+        final compressedSize = _getByteSize(compressedSignatureBytes);
+
+        payload.add({
+          'field_label': 'signature_$i',
+          'answer': base64Encode(compressedSignatureBytes!),
+          'original_size': originalSize,
+          'compressed_size': compressedSize,
+          'form_id': widget.formId.toString(),
           'created_by': 'username', // Replace with actual user UUID
           'created_at': DateTime.now().toUtc().toString(),
         });
-      });
-
-      // Handling signature fields
-      for (int i = 0; i < _signatureControllers.length; i++) {
-        SignatureController controller = _signatureControllers[i];
-        final originalSignatureBytes = await _captureSignature(controller);
-        if (originalSignatureBytes != null) {
-          final originalSize = _getByteSize(originalSignatureBytes);
-          print('Original Signature Size: $originalSize bytes');
-
-          final compressedSignatureBytes =
-              await _compressSignature(originalSignatureBytes);
-          final compressedSize = _getByteSize(compressedSignatureBytes);
-          print('Compressed Signature Size: $compressedSize bytes');
-
-          payload.add({
-            'field_label': 'signature_$i', // Adjust as needed
-            'answer': base64Encode(
-                compressedSignatureBytes!), // Send as base64 string
-            'original_size': originalSize,
-            'compressed_size': compressedSize,
-            'form_id': widget.formId.toString(),
-            'created_by': 'username', // Replace with actual user UUID
-            'created_at': DateTime.now().toUtc().toString(),
-          });
-        }
       }
+    }
 
-      final String endpoint =
-          'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
+// print payload data
+        print('Payload: ${jsonEncode(payload)}');
 
-  //     try {
-  //       final response = await http.post(
-  //         Uri.parse(endpoint),
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //           'Authorization': 'Bearer ${TokenManager.accessToken}',
-  //         },
-  //         body: json.encode(payload),
-  //       );
 
-  //       print('Payload: ${json.encode(payload)}');
+    final String endpoint =
+        'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
 
-  //       if (response.statusCode == 200) {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(content: Text('Form submitted successfully!')),
-  //         );
-  //       } else {
-  //         print('Failed to submit form: ${response.statusCode}');
-  //         print('Response body: ${response.body}');
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(
-  //               content: Text(
-  //                   'Failed to submit form: ${response.statusCode}\n${response.body}')),
-  //         );
-  //       }
-  //     } catch (e) {
-  //       print('Error submitting form: $e');
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Error submitting form: $e')),
-  //       );
-  //     }
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Please fill in all required fields.')),
-  //     );
-  //   }
-  // }
-
-  if (await _hasInternetConnection()) {
-      // If online, submit data to the remote server
+    if (await _hasInternetConnection()) {
       try {
         final response = await http.post(
           Uri.parse(endpoint),
@@ -444,15 +563,11 @@ Future<bool> _hasInternetConnection() async {
           body: json.encode(payload),
         );
 
-        print('Payload: ${json.encode(payload)}');
-
         if (response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Form submitted successfully!')),
           );
         } else {
-          print('Failed to submit form: ${response.statusCode}');
-          print('Response body: ${response.body}');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(
@@ -460,21 +575,17 @@ Future<bool> _hasInternetConnection() async {
           );
         }
       } catch (e) {
-        print('Error submitting form: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error submitting form: $e')),
         );
       }
     } else {
-      // If offline, save data to Hive
       try {
         await _saveFormLocally(payload);
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No internet connection. Form saved locally.')),
         );
       } catch (e) {
-        print('Error saving form locally: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error saving form locally: $e')),
         );
@@ -486,6 +597,42 @@ Future<bool> _hasInternetConnection() async {
     );
   }
 }
+
+// Method to fetch form details
+Future<FormModel?> _fetchFormDetails(String formId) async {
+  final String endpoint = 'http://192.168.250.209:7300/api/v1/messages/form/$formId';
+  try {
+    final response = await http.get(Uri.parse(endpoint), headers: {
+      'Authorization': 'Bearer ${TokenManager.accessToken}',
+    });
+
+    if (response.statusCode == 200) {
+      final formData = jsonDecode(response.body);
+      return FormModel.fromJson(formData['data']);
+    } else {
+      print('Failed to fetch form details: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      return null;
+    }
+  } catch (e) {
+    print('Error fetching form details: $e');
+    return null;
+  }
+}
+
+
+// String? _extractFormDetailId(String fieldLabel) {
+//   // Find the form detail that matches the field label
+//   final detail = formDetails.firstWhere(
+//     (detail) => detail.fieldLabel == fieldLabel,
+//     orElse: () => null,
+//   );
+  
+//   // Return the id if the detail is found, otherwise return null
+//   return detail?.id;
+// }
+
+
 
 Future<void> _saveFormLocally(List<Map<String, dynamic>> payload) async {
   var box = await Hive.openBox<Map<String, dynamic>>('form_submissions');

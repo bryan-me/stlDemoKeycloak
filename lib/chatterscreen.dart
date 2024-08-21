@@ -58,7 +58,7 @@ class _ChatterScreenState extends State<ChatterScreen> {
       final jwt = JWT.decode(widget.token);
 
       // Extract user details from the payload
-      username = jwt.payload['preferred_username'];
+      username = jwt.payload['name'];
       email = jwt.payload['email'];
       sub = jwt.payload['sub'];
 
@@ -425,7 +425,7 @@ void onMessageReceived(String messageContent, String sender, bool isUserMessage)
           context, '/'); // Adjust the route as needed
       if (response.statusCode == 204) {
         print('Logout successful.');
-        TokenManager.clearTokens();
+        // TokenManager.clearTokens();
         Navigator.pushReplacementNamed(
             context, '/'); // Adjust the route as needed
       } else {

@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -14,8 +16,11 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
+    final FlutterSecureStorage secureStorage = FlutterSecureStorage();
+
 
 class ApplicationHttpOverrides extends HttpOverrides {
   @override
@@ -55,6 +60,9 @@ class ApplicationHttpOverrides extends HttpOverrides {
 void main() async {
   HttpOverrides.global = ApplicationHttpOverrides();
   await Hive.initFlutter();
+
+    HttpOverrides.global = ApplicationHttpOverrides();
+
 
   Hive.registerAdapter(FormModelAdapter());
   Hive.registerAdapter(FormDetailAdapter());
@@ -119,7 +127,42 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
 
     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
+
+    _loadSavedCredentials();
   }
+
+    Future<void> _loadSavedCredentials() async {
+    final credentials = await retrieveCredentials();
+    if (credentials['username'] != null && credentials['password'] != null) {
+      _usernameController.text = credentials['username']!;
+      _passwordController.text = credentials['password']!;
+    }
+  }
+
+  Future<void> storeCredentials(String username, String password) async {
+    await secureStorage.write(key: 'username', value: username);
+    await secureStorage.write(key: 'password', value: password);
+  }
+
+  Future<Map<String, String?>> retrieveCredentials() async {
+    String? username = await secureStorage.read(key: 'username');
+    String? password = await secureStorage.read(key: 'password');
+    print("");
+    return {'username': username, 'password': password};
+  }
+
+Future<bool> isConnectedToNetwork() async {
+  var connectivityResult = await Connectivity().checkConnectivity();
+
+  if (connectivityResult == ConnectivityResult.mobile || 
+      connectivityResult == ConnectivityResult.wifi) {
+    // Connected to a mobile network or Wi-Fi
+    return true;
+  } else {
+    // Not connected to any network
+    return false;
+  }
+}
 
   Future<void> createClient() async {
     final tokenEndpoint = Uri.parse(
@@ -177,9 +220,47 @@ class _MyHomePageState extends State<MyHomePage> {
     } catch (e) {
       print('Error during token exchange: $e');
       setState(() {
-        TokenManager.clearTokens();
+        // TokenManager.clearTokens();
       });
       throw Exception('Failed to obtain access token');
+    }
+  }
+
+  Future<void> login() async {
+    if (await isConnectedToNetwork()) {
+      // Online login
+      try {
+        await createClient();
+      } catch (e) {
+        print('Error during login: $e');
+      }
+    } else {
+      // Offline login
+      final credentials = await retrieveCredentials();
+      if (credentials['username'] == _usernameController.text &&
+          credentials['password'] == _passwordController.text) {
+        // Allow offline access
+        final lastAccessToken = await secureStorage.read(key: 'access_token');
+        final lastRefreshToken = await secureStorage.read(key: 'refresh_token');
+        final lastSub = await secureStorage.read(key: 'sub');
+
+        if (lastAccessToken != null && lastRefreshToken != null && lastSub != null) {
+          setState(() {
+            TokenManager.setTokens(lastAccessToken, lastRefreshToken, lastSub);
+          });
+
+          logger.info('Offline login successful for user ${credentials['username']}');
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => BottomNavigation()),
+          );
+        } else {
+          print('No valid tokens available for offline use');
+        }
+      } else {
+        print('No stored credentials or invalid credentials');
+      }
     }
   }
 
@@ -253,14 +334,16 @@ class _MyHomePageState extends State<MyHomePage> {
                           color: Colors.white,
                         ),
                       ),
-                      onPressed: () async {
-                        print('Login button pressed');
-                        try {
-                          await createClient();
-                        } catch (e) {
-                          print('Error during login: $e');
-                        }
-                      },
+                      onPressed: login,
+                      // () async {
+                      //   print('Login button pressed');
+                      //   try {
+                          
+                      //     // await createClient();
+                      //   } catch (e) {
+                      //     print('Error during login: $e');
+                      //   }
+                      // },
                       style: ElevatedButton.styleFrom(
                         shape: const StadiumBorder(),
                         padding: const EdgeInsets.symmetric(vertical: 16),
