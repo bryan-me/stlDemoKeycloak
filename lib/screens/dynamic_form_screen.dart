@@ -28,6 +28,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   Future<FormData>? _formResponse;
   Map<String, String> _textFieldValues = {};
   Map<String, dynamic> _radioGroupValues = {};
+  Map<String, Map<String, bool>> _dropdownGroupValues = {};
   Map<String, Map<String, bool>> _checkboxGroupValues = {};
   List<SignatureController> _signatureControllers = [];
   final ImagePicker _picker = ImagePicker();
@@ -103,6 +104,40 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       );
 
       switch (field.fieldType.toUpperCase()) {
+        case 'DATE':
+          final TextEditingController dateController = TextEditingController(
+            text: _textFieldValues[field.fieldLabel] ?? '',
+          );
+
+          formFields.add(
+            TextFormField(
+              controller: dateController,
+              readOnly: true,
+              decoration: InputDecoration(
+                hintText: field.placeholder,
+                suffixIcon: Icon(Icons.calendar_today),
+              ),
+              onTap: () async {
+                DateTime? selectedDate = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(1900),
+                  lastDate: DateTime(2100),
+                );
+
+                if (selectedDate != null) {
+                  setState(() {
+                    String formattedDate =
+                        "${selectedDate.year}-${selectedDate.month}-${selectedDate.day}";
+                    dateController.text = formattedDate;
+                    _textFieldValues[field.fieldLabel] = formattedDate;
+                  });
+                  _saveFormData(widget.formId);
+                }
+              },
+            ),
+          );
+          break;
         case 'RADIO':
           _radioGroupValues[field.fieldLabel] ??= null;
           formFields.addAll(field.fieldOptions.map((option) {
@@ -136,6 +171,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
           ));
           break;
         case 'DROPDOWN':
+        _dropdownGroupValues[field.fieldLabel] ??= {};
           formFields.add(DropdownButtonFormField<String>(
             items: field.fieldOptions.map((option) {
               String optionKey = option.keys.first;
@@ -348,92 +384,73 @@ Future<bool> _hasInternetConnection() async {
     return compressedBytes;
   }
 
-//   void _submitForm() async {
-//     if (_formKey.currentState!.validate()) {
-//       _formKey.currentState!.save();
 
-//       final List<Map<String, dynamic>> payload = [];
 
-//       _textFieldValues.forEach((key, value) {
+// void _submitForm() async {
+//   if (_formKey.currentState!.validate()) {
+//     _formKey.currentState!.save();
+
+//     // Assuming you have a method to fetch form details from the endpoint
+//     FormModel? formModel = await _fetchFormDetails(widget.formId);
+
+//     if (formModel == null) {
+//       // Handle error if form details could not be fetched
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(content: Text('Failed to fetch form details.')),
+//       );
+//       return;
+//     }
+
+//     final List<Map<String, dynamic>> payload = [];
+
+//     _textFieldValues.forEach((key, value) {
+//       // Find the corresponding form detail by field label
+//       String? formDetailId = formModel.formDetails.firstWhere(
+//         (detail) => detail.fieldLabel == key,
+//         orElse: () => FormDetail(id: '', index: 0, fieldLabel: '', fieldOptions: [], isRequired: false, defaultValue: '', placeholder: '', fieldType: '', constraints: [], key: '', createdBy: '', updatedBy: '')
+//       ).id;
+
+//       if (formDetailId != null && formDetailId.isNotEmpty) {
 //         payload.add({
 //           'field_label': key,
 //           'answer': value,
-//           'form_id': widget.formId
-//               .toString(), // Ensure these IDs are converted to String if necessary
+//           'formId': widget.formId.toString(),
+//           'formDetailId': formDetailId, 
+//           'created_by': 'username', 
+//           'created_at': DateTime.now().toUtc().toString(),
+//         });
+//       }
+//     });
+
+//     // Include signature fields if applicable
+//     for (int i = 0; i < _signatureControllers.length; i++) {
+//       SignatureController controller = _signatureControllers[i];
+//       final originalSignatureBytes = await _captureSignature(controller);
+//       if (originalSignatureBytes != null) {
+//         final originalSize = _getByteSize(originalSignatureBytes);
+//         final compressedSignatureBytes = await _compressSignature(originalSignatureBytes);
+//         final compressedSize = _getByteSize(compressedSignatureBytes);
+
+//         payload.add({
+//           'field_label': 'signature_$i',
+//           'answer': base64Encode(compressedSignatureBytes!),
+//           'original_size': originalSize,
+//           'compressed_size': compressedSize,
+//           'form_id': widget.formId.toString(),
 //           'created_by': 'username', // Replace with actual user UUID
 //           'created_at': DateTime.now().toUtc().toString(),
 //         });
-//       });
-
-//       // Handling signature fields
-//       for (int i = 0; i < _signatureControllers.length; i++) {
-//         SignatureController controller = _signatureControllers[i];
-//         final originalSignatureBytes = await _captureSignature(controller);
-//         if (originalSignatureBytes != null) {
-//           final originalSize = _getByteSize(originalSignatureBytes);
-//           print('Original Signature Size: $originalSize bytes');
-
-//           final compressedSignatureBytes =
-//               await _compressSignature(originalSignatureBytes);
-//           final compressedSize = _getByteSize(compressedSignatureBytes);
-//           print('Compressed Signature Size: $compressedSize bytes');
-
-//           payload.add({
-//             'field_label': 'signature_$i', // Adjust as needed
-//             'answer': base64Encode(
-//                 compressedSignatureBytes!), // Send as base64 string
-//             'original_size': originalSize,
-//             'compressed_size': compressedSize,
-//             'form_id': widget.formId.toString(),
-//             'created_by': 'username', // Replace with actual user UUID
-//             'created_at': DateTime.now().toUtc().toString(),
-//           });
-//         }
 //       }
+//     }
 
-//       final String endpoint =
-//           'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
+// // print payload data
+//         print('Payload: ${jsonEncode(payload)}');
 
-//   //     try {
-//   //       final response = await http.post(
-//   //         Uri.parse(endpoint),
-//   //         headers: {
-//   //           'Content-Type': 'application/json',
-//   //           'Authorization': 'Bearer ${TokenManager.accessToken}',
-//   //         },
-//   //         body: json.encode(payload),
-//   //       );
 
-//   //       print('Payload: ${json.encode(payload)}');
+//     final String endpoint =
+//         'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
 
-//   //       if (response.statusCode == 200) {
-//   //         ScaffoldMessenger.of(context).showSnackBar(
-//   //           SnackBar(content: Text('Form submitted successfully!')),
-//   //         );
-//   //       } else {
-//   //         print('Failed to submit form: ${response.statusCode}');
-//   //         print('Response body: ${response.body}');
-//   //         ScaffoldMessenger.of(context).showSnackBar(
-//   //           SnackBar(
-//   //               content: Text(
-//   //                   'Failed to submit form: ${response.statusCode}\n${response.body}')),
-//   //         );
-//   //       }
-//   //     } catch (e) {
-//   //       print('Error submitting form: $e');
-//   //       ScaffoldMessenger.of(context).showSnackBar(
-//   //         SnackBar(content: Text('Error submitting form: $e')),
-//   //       );
-//   //     }
-//   //   } else {
-//   //     ScaffoldMessenger.of(context).showSnackBar(
-//   //       SnackBar(content: Text('Please fill in all required fields.')),
-//   //     );
-//   //   }
-//   // }
-
-//   if (await _hasInternetConnection()) {
-//       // If online, submit data to the remote server
+//     if (await _hasInternetConnection()) {
 //       try {
 //         final response = await http.post(
 //           Uri.parse(endpoint),
@@ -444,15 +461,11 @@ Future<bool> _hasInternetConnection() async {
 //           body: json.encode(payload),
 //         );
 
-//         print('Payload: ${json.encode(payload)}');
-
 //         if (response.statusCode == 200) {
 //           ScaffoldMessenger.of(context).showSnackBar(
 //             SnackBar(content: Text('Form submitted successfully!')),
 //           );
 //         } else {
-//           print('Failed to submit form: ${response.statusCode}');
-//           print('Response body: ${response.body}');
 //           ScaffoldMessenger.of(context).showSnackBar(
 //             SnackBar(
 //                 content: Text(
@@ -460,21 +473,17 @@ Future<bool> _hasInternetConnection() async {
 //           );
 //         }
 //       } catch (e) {
-//         print('Error submitting form: $e');
 //         ScaffoldMessenger.of(context).showSnackBar(
 //           SnackBar(content: Text('Error submitting form: $e')),
 //         );
 //       }
 //     } else {
-//       // If offline, save data to Hive
 //       try {
 //         await _saveFormLocally(payload);
-
 //         ScaffoldMessenger.of(context).showSnackBar(
 //           SnackBar(content: Text('No internet connection. Form saved locally.')),
 //         );
 //       } catch (e) {
-//         print('Error saving form locally: $e');
 //         ScaffoldMessenger.of(context).showSnackBar(
 //           SnackBar(content: Text('Error saving form locally: $e')),
 //         );
@@ -487,73 +496,180 @@ Future<bool> _hasInternetConnection() async {
 //   }
 // }
 
+// void _submitForm() async {
+//   if (_formKey.currentState!.validate()) {
+//     _formKey.currentState!.save();
+
+//     // Assuming you have a method to fetch form details from the endpoint
+//     FormModel? formModel = await _fetchFormDetails(widget.formId);
+
+//     if (formModel == null) {
+//       // Handle error if form details could not be fetched
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(content: Text('Failed to fetch form details.')),
+//       );
+//       return;
+//     }
+
+//     final List<Map<String, dynamic>> payload = [];
+
+//     _textFieldValues.forEach((key, value) {
+//       // Find the corresponding form detail by field label
+//       FormDetail? formDetail = formModel.formDetails.firstWhere(
+//         (detail) => detail.fieldLabel == key,
+//         orElse: () => FormDetail(id: '', index: 0, fieldLabel: '', fieldOptions: [], isRequired: false, defaultValue: '', placeholder: '', fieldType: '', constraints: [], key: '', createdBy: '', updatedBy: '')
+//       );
+
+//       if (formDetail.id.isNotEmpty) {
+//         payload.add({
+//           'fieldLabel': formDetail.fieldLabel,
+//           'fieldLype': formDetail.fieldType,
+//           'answer': value,
+//           'formId': widget.formId.toString(),
+//           'formDetailId': formDetail.id, 
+//           'created_by': 'username', 
+//           'created_at': DateTime.now().toUtc().toString(),
+//         });
+//       }
+//     });
+
+//     // Include signature fields if applicable
+//     for (int i = 0; i < _signatureControllers.length; i++) {
+//       SignatureController controller = _signatureControllers[i];
+//       final originalSignatureBytes = await _captureSignature(controller);
+//       if (originalSignatureBytes != null) {
+//         final originalSize = _getByteSize(originalSignatureBytes);
+//         final compressedSignatureBytes = await _compressSignature(originalSignatureBytes);
+//         final compressedSize = _getByteSize(compressedSignatureBytes);
+
+//         payload.add({
+//           'field_label': 'signature_$i',
+//           'field_type': 'SIGNATURE',
+//           'answer': base64Encode(compressedSignatureBytes!),
+//           'original_size': originalSize,
+//           'compressed_size': compressedSize,
+//           'form_id': widget.formId.toString(),
+//           'created_by': 'username', // Replace with actual user UUID
+//           'created_at': DateTime.now().toUtc().toString(),
+//         });
+//       }
+//     }
+
+//     // Print payload data
+//     print('Payload: ${jsonEncode(payload)}');
+
+//     final String endpoint =
+//         'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
+
+//     if (await _hasInternetConnection()) {
+//       try {
+//         final response = await http.post(
+//           Uri.parse(endpoint),
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': 'Bearer ${TokenManager.accessToken}',
+//           },
+//           body: json.encode(payload),
+//         );
+
+//         if (response.statusCode == 200) {
+//           ScaffoldMessenger.of(context).showSnackBar(
+//             SnackBar(content: Text('Form submitted successfully!')),
+//           );
+//         } else {
+//           ScaffoldMessenger.of(context).showSnackBar(
+//             SnackBar(
+//                 content: Text(
+//                     'Failed to submit form: ${response.statusCode}\n${response.body}')),
+//           );
+//         }
+//       } catch (e) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(content: Text('Error submitting form: $e')),
+//         );
+//       }
+//     } else {
+//       try {
+//         await _saveFormLocally(payload);
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(content: Text('No internet connection. Form saved locally.')),
+//         );
+//       } catch (e) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(content: Text('Error saving form locally: $e')),
+//         );
+//       }
+//     }
+//   } else {
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text('Please fill in all required fields.')),
+//     );
+//   }
+// }
+
+
 void _submitForm() async {
   if (_formKey.currentState!.validate()) {
     _formKey.currentState!.save();
 
-    // Assuming you have a method to fetch form details from the endpoint
-    FormModel? formModel = await _fetchFormDetails(widget.formId);
+    try {
+      // Fetch form details from the endpoint
+      FormModel? formModel = await _fetchFormDetails(widget.formId);
 
-    if (formModel == null) {
-      // Handle error if form details could not be fetched
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch form details.')),
-      );
-      return;
-    }
-
-    final List<Map<String, dynamic>> payload = [];
-
-    _textFieldValues.forEach((key, value) {
-      // Find the corresponding form detail by field label
-      String? formDetailId = formModel.formDetails.firstWhere(
-        (detail) => detail.fieldLabel == key,
-        orElse: () => FormDetail(id: '', index: 1, fieldLabel: '', fieldOptions: [], isRequired: false, defaultValue: '', placeholder: '', fieldType: '', constraints: [], key: '', createdBy: '', updatedBy: '')
-      ).id;
-
-      if (formDetailId != null && formDetailId.isNotEmpty) {
-        payload.add({
-          'fieldLabel': key,
-          'answer': value,
-          'formId': widget.formId.toString(),
-          'formDetailId': formDetailId, 
-          // 'placeholder': place
-          'createdBy': '', 
-          'createdAt': DateTime.now().toUtc().toString(),
-        });
+      if (formModel == null) {
+        throw Exception('Failed to fetch form details.');
       }
-    });
 
-    // Include signature fields if applicable
-    for (int i = 0; i < _signatureControllers.length; i++) {
-      SignatureController controller = _signatureControllers[i];
-      final originalSignatureBytes = await _captureSignature(controller);
-      if (originalSignatureBytes != null) {
-        final originalSize = _getByteSize(originalSignatureBytes);
-        final compressedSignatureBytes = await _compressSignature(originalSignatureBytes);
-        final compressedSize = _getByteSize(compressedSignatureBytes);
+      final List<Map<String, dynamic>> payload = [];
 
-        payload.add({
-          'field_label': 'signature_$i',
-          'answer': base64Encode(compressedSignatureBytes!),
-          'original_size': originalSize,
-          'compressed_size': compressedSize,
-          'form_id': widget.formId.toString(),
-          'created_by': 'username', // Replace with actual user UUID
-          'created_at': DateTime.now().toUtc().toString(),
-        });
+      _textFieldValues.forEach((key, value) {
+        // Find the corresponding form detail by field label
+        FormDetail? formDetail = formModel.formDetails.firstWhere(
+          (detail) => detail.fieldLabel == key,
+          orElse: () => FormDetail(id: '', index: 0, fieldLabel: '', fieldOptions: [], isRequired: false, defaultValue: '', placeholder: '', fieldType: '', constraints: [], key: '', createdBy: '', updatedBy: '')
+        );
+
+        if (formDetail.id.isNotEmpty) {
+          payload.add({
+            'fieldLabel': formDetail.fieldLabel,
+            'fieldType': formDetail.fieldType,
+            'answer': value,
+            'formId': widget.formId.toString(),
+            'formDetailId': formDetail.id,
+            'created_by': 'username', 
+            'created_at': DateTime.now().toUtc().toString(),
+          });
+        }
+      });
+
+      // Include signature fields if applicable
+      for (int i = 0; i < _signatureControllers.length; i++) {
+        SignatureController controller = _signatureControllers[i];
+        final originalSignatureBytes = await _captureSignature(controller);
+        if (originalSignatureBytes != null) {
+          final originalSize = _getByteSize(originalSignatureBytes);
+          final compressedSignatureBytes = await _compressSignature(originalSignatureBytes);
+          final compressedSize = _getByteSize(compressedSignatureBytes);
+
+          payload.add({
+            'field_label': 'signature_$i',
+            'answer': base64Encode(compressedSignatureBytes!),
+            'original_size': originalSize,
+            'compressed_size': compressedSize,
+            'form_id': widget.formId.toString(),
+            'created_by': 'username', 
+            'created_at': DateTime.now().toUtc().toString(),
+          });
+        }
       }
-    }
 
-// print payload data
-        print('Payload: ${jsonEncode(payload)}');
+      // Print payload for debugging
+      print('Payload: ${jsonEncode(payload)}');
 
+      final String endpoint =
+          'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
 
-    final String endpoint =
-        'http://192.168.250.209:7300/api/v1/messages/submit-answer/${widget.formId}';
-
-    if (await _hasInternetConnection()) {
-      try {
+      if (await _hasInternetConnection()) {
         final response = await http.post(
           Uri.parse(endpoint),
           headers: {
@@ -568,28 +684,26 @@ void _submitForm() async {
             SnackBar(content: Text('Form submitted successfully!')),
           );
         } else {
+          // Print and show error message from the response
+          print('Failed to submit form: ${response.statusCode}\n${response.body}');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(
                     'Failed to submit form: ${response.statusCode}\n${response.body}')),
           );
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error submitting form: $e')),
-        );
-      }
-    } else {
-      try {
+      } else {
         await _saveFormLocally(payload);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No internet connection. Form saved locally.')),
         );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving form locally: $e')),
-        );
       }
+    } catch (e) {
+      // Catch and print any other errors
+      print('Error during form submission: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error submitting form: $e')),
+      );
     }
   } else {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -597,6 +711,7 @@ void _submitForm() async {
     );
   }
 }
+
 
 // Method to fetch form details
 Future<FormModel?> _fetchFormDetails(String formId) async {
@@ -725,48 +840,6 @@ void _startConnectivityListener() {
     }
   }
 
-  // Future<FormData> _fetchFormDataFromRemote(String formId) async {
-  //   final token = TokenManager.accessToken;
-  //   if (token == null) {
-  //     throw Exception('Not authenticated');
-  //   }
-
-  //   final response = await http.get(
-  //     Uri.parse('http://192.168.250.209:7300/api/v1/messages/form/$formId'),
-  //     headers: {'Authorization': 'Bearer $token'},
-  //   );
-
-  //   if (response.statusCode == 200) {
-  //     final data = json.decode(response.body)['data'];
-  //     final formModel = FormModel.fromJson(data);
-
-  //     var box = await Hive.openBox<FormModel>('forms');
-  //     await box.put(formModel.id, formModel);
-  //     try {
-  //       final jsonBody = json.decode(response.body);
-
-  //       // Check if 'data' is a list and if it's empty
-  //       if (jsonBody['data'] is List && (jsonBody['data'] as List).isEmpty) {
-  //         throw Exception('No form data available');
-  //       }
-
-  //       // Assuming 'data' should be a map or at least a non-empty list
-  //       if (jsonBody['data'] is Map<String, dynamic>) {
-  //         return FormData.fromJson(jsonBody['data']);
-  //       } else {
-  //         throw Exception('Unexpected JSON structure: "data" is not a Map');
-  //       }
-  //     } catch (e) {
-  //       print('Error parsing response: $e');
-  //       throw Exception('Failed to parse form data');
-  //     }
-  //   } else {
-  //     // Logging response details for debugging
-  //     print('Failed to load form data: ${response.statusCode}');
-  //     print('Response body: ${response.body}');
-  //     throw Exception('Failed to load form data: ${response.statusCode}');
-  //   }
-  // }
 
   Future<FormData> _fetchFormDataFromRemote(String formId) async {
   final token = TokenManager.accessToken;
@@ -828,6 +901,7 @@ Future<FormData> _fetchFormDataFromHive(String formId) async {
         'formData_$formId',
         json.encode({
           'radioGroupValues': _radioGroupValues,
+          'dropdownGroupValues': _dropdownGroupValues,
           'checkboxGroupValues': _checkboxGroupValues.map((key, value) =>
               MapEntry(key, value.map((k, v) => MapEntry(k, v)))),
           'longitude': _longitudeController.text,
