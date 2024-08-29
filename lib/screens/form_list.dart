@@ -200,54 +200,103 @@ class _FormListScreenState extends State<FormListScreen> {
     checkHiveData();
   }
 
+  // Future<ApiResponse> fetchForms() async {
+  //   final token = TokenManager.accessToken;
+  //   if (token == null) {
+  //     throw Exception('Not authenticated');
+  //   }
+
+  //   var formBox = await Hive.openBox<FormModel>('forms');
+  //   if (formBox.isNotEmpty) {
+  //     var forms = formBox.values.toList();
+  //     return ApiResponse(data: forms);
+  //   }
+
+  //   final response = await http.get(
+  //     Uri.parse('http://192.168.250.209:7300/api/v1/messages/findAllForms'),
+  //     headers: {'Authorization': 'Bearer $token'},
+  //   );
+
+  //   if (response.statusCode == 200) {
+  //     try {
+  //       final jsonResponse = json.decode(response.body);
+  //       if (jsonResponse is Map<String, dynamic> &&
+  //           jsonResponse['data'] is List) {
+  //         var apiResponse = ApiResponse.fromJson(jsonResponse);
+
+  //         for (var form in apiResponse.data) {
+  //           // await formBox.put(form.id, form);
+  //           try {
+  //             await formBox.put(form.id, form);
+  //             print('Form saved: ${form.id}');
+  //           } catch (e) {
+  //             print('Error saving form: $e');
+  //           }
+  //         }
+
+  //         return apiResponse;
+  //       } else {
+  //         throw Exception('Invalid response format');
+  //       }
+  //     } catch (e) {
+  //       print('Error parsing response: $e');
+  //       throw Exception('Failed to parse forms');
+  //     }
+  //   } else {
+  //     print('Failed to load forms: ${response.statusCode}');
+  //     print('Response body: ${response.body}');
+  //     throw Exception('Failed to load forms: ${response.statusCode}');
+  //   }
+  // }
+
   Future<ApiResponse> fetchForms() async {
-    final token = TokenManager.accessToken;
-    if (token == null) {
-      throw Exception('Not authenticated');
-    }
-
-    var formBox = await Hive.openBox<FormModel>('forms');
-    if (formBox.isNotEmpty) {
-      var forms = formBox.values.toList();
-      return ApiResponse(data: forms);
-    }
-
-    final response = await http.get(
-      Uri.parse('http://192.168.250.209:7300/api/v1/messages/findAllForms'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (response.statusCode == 200) {
-      try {
-        final jsonResponse = json.decode(response.body);
-        if (jsonResponse is Map<String, dynamic> &&
-            jsonResponse['data'] is List) {
-          var apiResponse = ApiResponse.fromJson(jsonResponse);
-
-          for (var form in apiResponse.data) {
-            // await formBox.put(form.id, form);
-            try {
-              await formBox.put(form.id, form);
-              print('Form saved: ${form.id}');
-            } catch (e) {
-              print('Error saving form: $e');
-            }
-          }
-
-          return apiResponse;
-        } else {
-          throw Exception('Invalid response format');
-        }
-      } catch (e) {
-        print('Error parsing response: $e');
-        throw Exception('Failed to parse forms');
-      }
-    } else {
-      print('Failed to load forms: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      throw Exception('Failed to load forms: ${response.statusCode}');
-    }
+  final token = TokenManager.accessToken;
+  if (token == null) {
+    throw Exception('Not authenticated');
   }
+
+  var formBox = await Hive.openBox<FormModel>('forms');
+  if (formBox.isNotEmpty) {
+    var forms = formBox.values.toList();
+    return ApiResponse(data: forms);
+  }
+
+  final response = await http.get(
+    Uri.parse('http://192.168.250.209:7300/api/v1/messages/findAllForms'),
+    headers: {'Authorization': 'Bearer $token'},
+  );
+
+  if (response.statusCode == 200) {
+    try {
+      final jsonResponse = json.decode(response.body);
+
+      // Ensure that 'data' exists and is a list
+      if (jsonResponse is Map<String, dynamic> && jsonResponse['data'] is List) {
+        var apiResponse = ApiResponse.fromJson(jsonResponse);
+
+        for (var form in apiResponse.data) {
+          try {
+            await formBox.put(form.id, form);
+            print('Form saved: ${form.id}');
+          } catch (e) {
+            print('Error saving form: $e');
+          }
+        }
+
+        return apiResponse;
+      } else {
+        throw Exception('Invalid response format');
+      }
+    } catch (e) {
+      print('Error parsing response: $e');
+      throw Exception('Failed to parse forms');
+    }
+  } else {
+    print('Failed to load forms: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    throw Exception('Failed to load forms: ${response.statusCode}');
+  }
+}
 
 //method to check that the form retrived from the database is being saved in hive 
    Future<void> checkHiveData() async {

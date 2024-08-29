@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:oauth2_test/constants.dart';
-import 'package:oauth2_test/tokenmanager.dart';
+// import 'package:oauth2_test/tokenmanager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 WebSocketChannel? channel;
@@ -158,60 +158,6 @@ class _ChatterScreenState extends State<ChatterScreen> {
     }
   }
 
-  // void _handleMessage(dynamic message) {
-  //   print('Raw message received: $message'); // Log the raw message
-
-  //   try {
-  //     final decodedMessage = message is String
-  //         ? jsonDecode(message)
-  //         : jsonDecode(utf8.decode(message));
-
-  //     if (decodedMessage is Map<String, dynamic>) {
-  //       if (decodedMessage.containsKey('result')) {
-  //         final result = decodedMessage['result'] as Map<String, dynamic>?;
-
-  //         if (result != null && result.containsKey('data')) {
-  //           final dataWrapper = result['data'] as Map<String, dynamic>?;
-
-  //           if (dataWrapper != null && dataWrapper.containsKey('data')) {
-  //             final data = dataWrapper['data'] as Map<String, dynamic>?;
-
-  //             final messageContent =
-  //                 data?['message'] as String? ?? 'Null message';
-  //             onMessageReceived(messageContent, 'User');
-  //           } else {
-  //             print('No "data" key in dataWrapper');
-  //           }
-  //         } else {
-  //           print('No "data" key in result');
-  //         }
-  //       } else {
-  //         print('No "result" key in decodedMessage');
-  //       }
-  //     } else {
-  //       print('Received message is not a valid JSON object: $decodedMessage');
-  //     }
-  //   } catch (e) {
-  //     print('Error parsing message: $e');
-  //   }
-  // }
-  
-
-  // void onMessageReceived(String messageContent, String sender) {
-  //   final messageBubble = MessageBubble(
-  //     msgText: messageContent,
-  //     msgSender: sender,
-  //     user: false,
-  //   );
-
-  //   setState(() {
-  //     messages.add(messageBubble);
-  //   });
-  //   _scrollToBottom();
-
-  //   _showNotification(messageContent);
-  // }
-
   void _handleMessage(dynamic message) {
   print('Raw message received: $message'); // Log the raw message
 
@@ -348,12 +294,6 @@ void onMessageReceived(String messageContent, String sender, bool isUserMessage)
       'Authorization': 'Bearer ${widget.token}',
       'apikey': '65bcc0d4-3d68-455c-b6c1-168c8f20eb27',
     };
-    // final body = jsonEncode({
-    //   'sender': widget.username,
-    //   'message': messageText,
-    //   'timestamp': DateTime.now().millisecondsSinceEpoch,
-    //   'senderEmail': widget.email,
-    // });
 
     final body = jsonEncode({
       'senderId': widget.sub, // Use the unique identifier of the sender
@@ -552,51 +492,6 @@ void onMessageReceived(String messageContent, String sender, bool isUserMessage)
   }
 }
 
-// class MessageBubble extends StatelessWidget {
-//   final String msgText;
-//   final String msgSender;
-//   final bool user;
-
-//   MessageBubble({
-//     required this.msgText,
-//     required this.msgSender,
-//     required this.user,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.all(12.0),
-//       child: Column(
-//         crossAxisAlignment:
-//             user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-//         children: <Widget>[
-//           Material(
-//             borderRadius: BorderRadius.only(
-//               bottomLeft: Radius.circular(50),
-//               topLeft: user ? Radius.circular(50) : Radius.circular(0),
-//               bottomRight: Radius.circular(50),
-//               topRight: user ? Radius.circular(0) : Radius.circular(50),
-//             ),
-//             color: user ? Colors.grey : Colors.blue.shade800,
-//             elevation: 5,
-//             child: Padding(
-//               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-//               child: Text(
-//                 msgText,
-//                 style: TextStyle(
-//                   color: user ? Colors.black : Colors.white,
-//                   fontFamily: 'Poppins',
-//                   fontSize: 15,
-//                 ),
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
 
 class MessageBubble extends StatelessWidget {
   final String msgText;
